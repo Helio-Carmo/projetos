@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Cortes - Módulo Termoacústico</title>
+    <style>
+        :root {
+            --bg-color: #f4f1ea;
+            --primary: #4a5c44;
+            --secondary: #899c82;
+            --text-dark: #2c2925;
+            --card-bg: #ffffff;
+            --border: #d4c5b6;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--primary);
+        }
+
+        input[type="number"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background-color: #384633;
+        }
+
+        #resultado {
+            display: none;
+        }
+
+        .result-box {
+            background-color: #eaf0e6;
+            border-left: 5px solid var(--secondary);
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 4px;
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px dashed var(--secondary);
+        }
+        
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-msg {
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Calculadora de Cortes</h1>
+        <p>Módulos Termoacústicos (Montagem Cata-Vento)</p>
+    </header>
+
+    <div class="card">
+        <form id="calcForm">
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Medida Interna Livre (cm)</label>
+                    <input type="number" id="medidaInterna" step="0.1" required placeholder="Ex: 12">
+                </div>
+                <div class="form-group">
+                    <label>Espessura da Madeira (cm)</label>
+                    <input type="number" id="espessuraMadeira" step="0.1" required placeholder="Ex: 2">
+                </div>
+                <div class="form-group">
+                    <label>Espessura do Isopor/EPS (cm)</label>
+                    <input type="number" id="espessuraIsopor" step="0.1" required placeholder="Ex: 1">
+                </div>
+                <div class="form-group">
+                    <label>Modelo da Tampa</label>
+                    <select id="modeloTampa">
+                        <option value="reta">Reta (Nivelada)</option>
+                        <option value="chapeu">Chapéu (Com Aba)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group" id="grupoAba" style="display:none;">
+                <label>Tamanho da Aba da Tampa (cm)</label>
+                <input type="number" id="tamanhoAba" step="0.1" value="2" placeholder="Ex: 2">
+            </div>
+
+            <button type="button" onclick="calcular()">Calcular Cortes e Salvar</button>
+            <div id="status" class="status-msg"></div>
+        </form>
+    </div>
+
+    <div class="card" id="resultado">
+        <h2>Lista de Cortes por Módulo/Caixa</h2>
+        
+        <div class="result-box">
+            <strong>1. Parede Dupla (Montagem Cata-Vento)</strong>
+            <div class="result-item">
+                <span>Camada Interna (Madeira)</span>
+                <strong id="resInterna"></strong>
+            </div>
+            <div class="result-item">
+                <span>Recheio (Isopor)</span>
+                <strong id="resIsopor"></strong>
+            </div>
+            <div class="result-item">
+                <span>Camada Externa (Madeira)</span>
+                <strong id="resExterna"></strong>
+            </div>
+        </div>
+
+        <div class="result-box">
+            <strong>2. Fechamentos</strong>
+            <div class="result-item">
+                <span>Fundo</span>
+                <strong id="resFundo"></strong>
+            </div>
+            <div class="result-item">
+                <span>Tampa</span>
+                <strong id="resTampa"></strong>
+            </div>
+        </div>
+        
+        <button type="button" onclick="window.print()" style="margin-top: 15px; background-color: var(--secondary);">Imprimir / Salvar PDF</button>
+    </div>
+</div>
+
+<script>
+    // Mostrar/Ocultar campo de aba dependendo da escolha da tampa
+    document.getElementById('modeloTampa').addEventListener('change', function() {
+        document.getElementById('grupoAba').style.display = this.value === 'chapeu' ? 'block' : 'none';
+    });
+
+    // Função principal de cálculo
+    function calcular() {
+        const interna = parseFloat(document.getElementById('medidaInterna').value);
+        const mad = parseFloat(document.getElementById('espessuraMadeira').value);
+        const isopor = parseFloat(document.getElementById('espessuraIsopor').value);
+        const modelo = document.getElementById('modeloTampa').value;
+        const aba = parseFloat(document.getElementById('tamanhoAba').value) || 0;
+
+        if(!interna || !mad || !isopor) {
+            alert("Preencha todas as medidas obrigatórias!");
+            return;
+        }
+
+        // Cálculos matemáticos do Cata-Vento
+        const compInterna = interna + mad;
+        const medidaExternaInterna = interna + (mad * 2);
+        
+        const compIsopor = medidaExternaInterna + isopor;
+        const medidaExternaIsopor = medidaExternaInterna + (isopor * 2);
+        
+        const compExterna = medidaExternaIsopor + mad;
+        const medidaTotalExterna = medidaExternaIsopor + (mad * 2);
+
+        const tamFundo = medidaTotalExterna;
+        const tamTampa = modelo === 'chapeu' ? medidaTotalExterna + (aba * 2) : medidaTotalExterna;
+
+        // Exibir resultados
+        document.getElementById('resInterna').innerText = `4 peças de ${compInterna} cm`;
+        document.getElementById('resIsopor').innerText = `4 peças de ${compIsopor} cm`;
+        document.getElementById('resExterna').innerText = `4 peças de ${compExterna} cm`;
+        document.getElementById('resFundo').innerText = `1 placa de ${tamFundo} x ${tamFundo} cm`;
+        document.getElementById('resTampa').innerText = `1 placa de ${tamTampa} x ${tamTampa} cm`;
+
+        document.getElementById('resultado').style.display = 'block';
+
+        // Salvar na memória do navegador
+        salvarDados({ interna, mad, isopor, modelo, aba });
+    }
+
+    // Salvar no LocalStorage
+    function salvarDados(dados) {
+        localStorage.setItem('config_meliponario', JSON.stringify(dados));
+        const status = document.getElementById('status');
+        status.innerText = "Medidas salvas na memória deste dispositivo!";
+        setTimeout(() => status.innerText = "", 3000);
+    }
+
+    // Carregar dados ao abrir a página
+    window.onload = function() {
+        const saved = localStorage.getItem('config_meliponario');
+        if(saved) {
+            const dados = JSON.parse(saved);
+            document.getElementById('medidaInterna').value = dados.interna;
+            document.getElementById('espessuraMadeira').value = dados.mad;
+            document.getElementById('espessuraIsopor').value = dados.isopor;
+            document.getElementById('modeloTampa').value = dados.modelo;
+            document.getElementById('tamanhoAba').value = dados.aba;
+            
+            if(dados.modelo === 'chapeu') {
+                document.getElementById('grupoAba').style.display = 'block';
+            }
+            
+            // Opcional: já calcular automaticamente se houver dados
+            // calcular(); 
+        }
+    };
+</script>
+</body>
+</html>
