@@ -80,6 +80,12 @@
             gap: 15px;
         }
 
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+        }
+
         button {
             background-color: var(--primary);
             color: white;
@@ -114,10 +120,15 @@
             justify-content: space-between;
             padding: 8px 0;
             border-bottom: 1px dashed var(--secondary);
+            align-items: center;
         }
         
         .result-item:last-child {
             border-bottom: none;
+        }
+        
+        .result-value {
+            text-align: right;
         }
 
         .status-msg {
@@ -147,6 +158,11 @@
             font-size: 14px;
             margin-bottom: 15px;
         }
+
+        .lixeira-box {
+            background-color: #f0f4f8;
+            border-left: 5px solid #6b8aab;
+        }
     </style>
 </head>
 <body>
@@ -173,35 +189,51 @@
 
             <div class="grid-2">
                 <div class="form-group">
-                    <label>Medida Interna Livre (cm)</label>
-                    <input type="number" id="medidaInterna" step="0.1" required placeholder="Ex: 12">
+                    <label>Largura Interna (cm)</label>
+                    <input type="number" id="larguraInterna" step="0.1" required placeholder="Ex: 12">
                 </div>
+                <div class="form-group">
+                    <label>Comprimento Interno (cm)</label>
+                    <input type="number" id="comprimentoInterno" step="0.1" required placeholder="Ex: 12 (ou maior para baú)">
+                </div>
+            </div>
+            
+            <div class="grid-2">
                 <div class="form-group">
                     <label>Espessura da Madeira Principal (cm)</label>
                     <input type="number" id="espessuraMadeira" step="0.1" required placeholder="Ex: 2">
                 </div>
-            </div>
-
-            <div id="msgEspessura" class="warning-msg" style="display:none;">
-                ⚠️ <strong>Atenção:</strong> Caixas com madeira de 2 cm ou menos podem não oferecer proteção térmica adequada. Considere utilizar madeira de 3 cm (ou mais), alterar para o formato Sanduíche, ou adicionar uma Camada Extra de revestimento abaixo.
-            </div>
-
-            <div class="grid-2">
                 <div class="form-group" id="grupoIsopor" style="display:none;">
                     <label>Espessura do Isopor/EPS (cm)</label>
                     <input type="number" id="espessuraIsopor" step="0.1" placeholder="Ex: 1">
                 </div>
             </div>
 
+            <div id="msgEspessura" class="warning-msg" style="display:none;">
+                ⚠️ <strong>Atenção:</strong> Caixas com madeira de 2 cm ou menos podem não oferecer proteção térmica adequada. Considere utilizar madeira de 3 cm (ou mais), alterar para o formato Sanduíche, ou adicionar uma Camada Extra.
+            </div>
+
             <div class="form-group" style="background: #fdfbf7; padding: 15px; border: 1px solid var(--border); border-radius: 6px; margin-top: 10px;">
                 <label style="display: flex; align-items: center; margin-bottom: 0;">
                     <input type="checkbox" id="temCamadaExtra">
-                    Adicionar uma camada EXTRA externa de madeira (Reforço Térmico)
+                    Adicionar camada EXTRA externa de madeira (Reforço)
                 </label>
                 
                 <div class="form-group" id="grupoExtra" style="display:none; margin-top: 15px; margin-bottom: 0;">
                     <label>Espessura da Madeira Extra (cm)</label>
                     <input type="number" id="espessuraExtra" step="0.1" placeholder="Ex: 2">
+                </div>
+            </div>
+
+            <div class="form-group" style="background: #f0f4f8; padding: 15px; border: 1px solid #d0deeb; border-radius: 6px; margin-top: 10px;">
+                <label style="display: flex; align-items: center; margin-bottom: 0;">
+                    <input type="checkbox" id="temLixeira">
+                    Adicionar Módulo de Lixeira
+                </label>
+                
+                <div class="form-group" id="grupoLixeira" style="display:none; margin-top: 15px; margin-bottom: 0;">
+                    <label>Altura do Módulo Lixeira (cm)</label>
+                    <input type="number" id="alturaLixeira" step="0.1" placeholder="Ex: 5">
                 </div>
             </div>
 
@@ -225,37 +257,58 @@
     </div>
 
     <div class="card" id="resultado">
-        <h2>Lista de Cortes por Módulo</h2>
+        <h2>Lista de Cortes</h2>
         
         <div class="result-box">
             <strong>1. Estrutura do Módulo (Montagem Cata-Vento)</strong>
             <div class="result-item">
                 <span id="labelInterna">Camada 1 (Madeira Interna)</span>
-                <strong id="resInterna"></strong>
+                <strong class="result-value" id="resInterna"></strong>
             </div>
             <div class="result-item" id="itemIsopor" style="display:none;">
                 <span>Camada 2 (Recheio Isopor)</span>
-                <strong id="resIsopor"></strong>
+                <strong class="result-value" id="resIsopor"></strong>
             </div>
             <div class="result-item" id="itemExterna" style="display:none;">
                 <span>Camada 3 (Madeira Externa)</span>
-                <strong id="resExterna"></strong>
+                <strong class="result-value" id="resExterna"></strong>
             </div>
             <div class="result-item" id="itemExtra" style="display:none; background-color: #fff3cd; padding: 5px;">
                 <span>Camada Extra (Revestimento)</span>
-                <strong id="resExtra"></strong>
+                <strong class="result-value" id="resExtra"></strong>
+            </div>
+        </div>
+
+        <div class="result-box lixeira-box" id="boxLixeira" style="display:none;">
+            <strong>2. Módulo de Lixeira</strong>
+            <p style="font-size: 13px; margin: 5px 0 10px 0;">Este módulo utiliza o mesmo esquema do módulo principal, mas as madeiras (e isopor) devem ser cortadas na altura de <strong id="txtAlturaLixeira"></strong> cm.</p>
+            <div class="result-item">
+                <span id="labelLixInterna">Camada 1</span>
+                <strong class="result-value" id="resLixInterna"></strong>
+            </div>
+            <div class="result-item" id="itemLixIsopor" style="display:none;">
+                <span>Camada 2 (Isopor)</span>
+                <strong class="result-value" id="resLixIsopor"></strong>
+            </div>
+            <div class="result-item" id="itemLixExterna" style="display:none;">
+                <span>Camada 3 (Externa)</span>
+                <strong class="result-value" id="resLixExterna"></strong>
+            </div>
+            <div class="result-item" id="itemLixExtra" style="display:none;">
+                <span>Camada Extra</span>
+                <strong class="result-value" id="resLixExtra"></strong>
             </div>
         </div>
 
         <div class="result-box">
-            <strong>2. Fechamentos</strong>
+            <strong id="titleFechamentos">3. Fechamentos</strong>
             <div class="result-item">
-                <span>Fundo</span>
-                <strong id="resFundo"></strong>
+                <span>Fundo (Nivelado c/ Base)</span>
+                <strong class="result-value" id="resFundo"></strong>
             </div>
             <div class="result-item">
                 <span>Tampa</span>
-                <strong id="resTampa"></strong>
+                <strong class="result-value" id="resTampa"></strong>
             </div>
         </div>
         
@@ -273,6 +326,10 @@
         document.getElementById('grupoExtra').style.display = this.checked ? 'block' : 'none';
     });
 
+    document.getElementById('temLixeira').addEventListener('change', function() {
+        document.getElementById('grupoLixeira').style.display = this.checked ? 'block' : 'none';
+    });
+
     document.getElementById('tipoCaixa').addEventListener('change', verificarAvisos);
     document.getElementById('espessuraMadeira').addEventListener('input', verificarAvisos);
 
@@ -283,7 +340,6 @@
         document.getElementById('grupoIsopor').style.display = isSanduiche ? 'block' : 'none';
         document.getElementById('msgSanduiche').style.display = isSanduiche ? 'block' : 'none';
 
-        // Dispara o alerta se for caixa simples e a madeira for 2cm ou menor
         if (!isSanduiche && espessura > 0 && espessura <= 2) {
             document.getElementById('msgEspessura').style.display = 'block';
         } else {
@@ -291,21 +347,30 @@
         }
     }
 
-    // Função Matemática Progressiva
+    function formataPecas(compW, compL) {
+        if(compW === compL) return `4 peças de ${compW} cm`;
+        return `2 pçs de ${compW} cm<br>2 pçs de ${compL} cm`;
+    }
+
+    // Função Matemática Progressiva p/ Retângulos
     function calcular() {
         const tipo = document.getElementById('tipoCaixa').value;
-        const interna = parseFloat(document.getElementById('medidaInterna').value);
+        const internaW = parseFloat(document.getElementById('larguraInterna').value);
+        const internaL = parseFloat(document.getElementById('comprimentoInterno').value);
         const mad = parseFloat(document.getElementById('espessuraMadeira').value);
         
         const isopor = parseFloat(document.getElementById('espessuraIsopor').value) || 0;
         const temExtra = document.getElementById('temCamadaExtra').checked;
         const madExtra = parseFloat(document.getElementById('espessuraExtra').value) || 0;
         
+        const temLixeira = document.getElementById('temLixeira').checked;
+        const altLixeira = parseFloat(document.getElementById('alturaLixeira').value) || 0;
+
         const modelo = document.getElementById('modeloTampa').value;
         const aba = parseFloat(document.getElementById('tamanhoAba').value) || 0;
 
-        if(!interna || !mad) {
-            alert("Preencha as medidas internas e a espessura da madeira principal!");
+        if(!internaW || !internaL || !mad) {
+            alert("Preencha as medidas internas (Largura/Comprimento) e a espessura principal!");
             return;
         }
         if(tipo === 'sanduiche' && !isopor) {
@@ -316,82 +381,131 @@
             alert("Preencha a espessura da camada extra de madeira!");
             return;
         }
+        if(temLixeira && !altLixeira) {
+            alert("Preencha a altura desejada para o módulo da lixeira!");
+            return;
+        }
 
-        // A mágica acontece aqui: A medida externa vai expandindo camada por camada
-        let medidaExternaAtual = interna;
+        // Variáveis de acompanhamento do crescimento externo (Largura e Comprimento)
+        let extW = internaW;
+        let extL = internaL;
 
-        // Camada 1: Madeira Principal (Sempre existe)
-        const compInterna = medidaExternaAtual + mad;
-        medidaExternaAtual += mad * 2; // O módulo cresceu
+        // Camada 1: Madeira Principal
+        const comp1_W = extW + mad;
+        const comp1_L = extL + mad;
+        extW += mad * 2;
+        extL += mad * 2;
+        
         document.getElementById('labelInterna').innerText = tipo === 'simples' ? "Madeira (Parede Principal)" : "Camada 1 (Madeira Interna)";
-        document.getElementById('resInterna').innerText = `4 peças de ${compInterna} cm`;
+        document.getElementById('resInterna').innerHTML = formataPecas(comp1_W, comp1_L);
+
+        // Preencher Lixeira (Camada 1) se ativo
+        if(temLixeira) {
+            document.getElementById('txtAlturaLixeira').innerText = altLixeira;
+            document.getElementById('labelLixInterna').innerText = tipo === 'simples' ? "Madeira (Parede Principal)" : "Camada 1 (Madeira Interna)";
+            document.getElementById('resLixInterna').innerHTML = formataPecas(comp1_W, comp1_L);
+        }
 
         // Camadas 2 e 3 (Se for Sanduíche)
         if(tipo === 'sanduiche') {
-            const compIsopor = medidaExternaAtual + isopor;
-            medidaExternaAtual += isopor * 2; // Expandiu com o isopor
-            document.getElementById('resIsopor').innerText = `4 peças de ${compIsopor} cm`;
+            const comp2_W = extW + isopor;
+            const comp2_L = extL + isopor;
+            extW += isopor * 2;
+            extL += isopor * 2;
+            document.getElementById('resIsopor').innerHTML = formataPecas(comp2_W, comp2_L);
             document.getElementById('itemIsopor').style.display = 'flex';
+            if(temLixeira) {
+                document.getElementById('resLixIsopor').innerHTML = formataPecas(comp2_W, comp2_L);
+                document.getElementById('itemLixIsopor').style.display = 'flex';
+            }
 
-            const compExterna = medidaExternaAtual + mad;
-            medidaExternaAtual += mad * 2; // Expandiu com o fechamento
-            document.getElementById('resExterna').innerText = `4 peças de ${compExterna} cm`;
+            const comp3_W = extW + mad;
+            const comp3_L = extL + mad;
+            extW += mad * 2;
+            extL += mad * 2;
+            document.getElementById('resExterna').innerHTML = formataPecas(comp3_W, comp3_L);
             document.getElementById('itemExterna').style.display = 'flex';
+            if(temLixeira) {
+                document.getElementById('resLixExterna').innerHTML = formataPecas(comp3_W, comp3_L);
+                document.getElementById('itemLixExterna').style.display = 'flex';
+            }
         } else {
             document.getElementById('itemIsopor').style.display = 'none';
             document.getElementById('itemExterna').style.display = 'none';
+            document.getElementById('itemLixIsopor').style.display = 'none';
+            document.getElementById('itemLixExterna').style.display = 'none';
         }
 
         // Camada Adicional / Extra
         if(temExtra) {
-            const compExtra = medidaExternaAtual + madExtra;
-            medidaExternaAtual += madExtra * 2; // Expansão final
-            document.getElementById('resExtra').innerText = `4 peças de ${compExtra} cm`;
+            const compExtra_W = extW + madExtra;
+            const compExtra_L = extL + madExtra;
+            extW += madExtra * 2;
+            extL += madExtra * 2;
+            document.getElementById('resExtra').innerHTML = formataPecas(compExtra_W, compExtra_L);
             document.getElementById('itemExtra').style.display = 'flex';
+            if(temLixeira) {
+                document.getElementById('resLixExtra').innerHTML = formataPecas(compExtra_W, compExtra_L);
+                document.getElementById('itemLixExtra').style.display = 'flex';
+            }
         } else {
             document.getElementById('itemExtra').style.display = 'none';
+            document.getElementById('itemLixExtra').style.display = 'none';
         }
 
-        // Fechamentos assumem a medidaExternaAtual final que sobrou do cálculo
-        const tamFundo = medidaExternaAtual;
-        const tamTampa = modelo === 'chapeu' ? medidaExternaAtual + (aba * 2) : medidaExternaAtual;
+        // Exibir Bloco da Lixeira e ajustar título
+        document.getElementById('boxLixeira').style.display = temLixeira ? 'block' : 'none';
+        document.getElementById('titleFechamentos').innerText = temLixeira ? '3. Fechamentos' : '2. Fechamentos';
 
-        // Exibir Fundo e Tampa
-        document.getElementById('resFundo').innerText = `1 placa de ${tamFundo} x ${tamFundo} cm`;
-        document.getElementById('resTampa').innerText = `1 placa de ${tamTampa} x ${tamTampa} cm`;
+        // Fechamentos assumem as medidas finais (extW e extL)
+        const tamFundoW = extW;
+        const tamFundoL = extL;
+        const tamTampaW = modelo === 'chapeu' ? extW + (aba * 2) : extW;
+        const tamTampaL = modelo === 'chapeu' ? extL + (aba * 2) : extL;
+
+        document.getElementById('resFundo').innerText = `1 placa de ${tamFundoW} x ${tamFundoL} cm`;
+        document.getElementById('resTampa').innerText = `1 placa de ${tamTampaW} x ${tamTampaL} cm`;
 
         document.getElementById('resultado').style.display = 'block';
 
-        // Salvar tudo na memória
-        salvarDados({ tipo, interna, mad, isopor, temExtra, madExtra, modelo, aba });
+        // Salvar na memória
+        salvarDados({ 
+            tipo, internaW, internaL, mad, isopor, 
+            temExtra, madExtra, temLixeira, altLixeira, 
+            modelo, aba 
+        });
     }
 
     function salvarDados(dados) {
-        localStorage.setItem('config_meliponario_v3', JSON.stringify(dados));
+        localStorage.setItem('config_meliponario_v4', JSON.stringify(dados));
         const status = document.getElementById('status');
         status.innerText = "Parâmetros salvos no navegador!";
         setTimeout(() => status.innerText = "", 3000);
     }
 
     window.onload = function() {
-        const saved = localStorage.getItem('config_meliponario_v3');
+        const saved = localStorage.getItem('config_meliponario_v4');
         if(saved) {
             const dados = JSON.parse(saved);
             
             document.getElementById('tipoCaixa').value = dados.tipo || 'simples';
-            document.getElementById('medidaInterna').value = dados.interna;
+            document.getElementById('larguraInterna').value = dados.internaW;
+            document.getElementById('comprimentoInterno').value = dados.internaL;
             document.getElementById('espessuraMadeira').value = dados.mad;
             document.getElementById('espessuraIsopor').value = dados.isopor;
             
             document.getElementById('temCamadaExtra').checked = dados.temExtra || false;
             document.getElementById('espessuraExtra').value = dados.madExtra;
+
+            document.getElementById('temLixeira').checked = dados.temLixeira || false;
+            document.getElementById('alturaLixeira').value = dados.altLixeira;
             
             document.getElementById('modeloTampa').value = dados.modelo || 'reta';
             document.getElementById('tamanhoAba').value = dados.aba;
             
-            // Disparar eventos para organizar a tela corretamente
             verificarAvisos();
             document.getElementById('temCamadaExtra').dispatchEvent(new Event('change'));
+            document.getElementById('temLixeira').dispatchEvent(new Event('change'));
             document.getElementById('modeloTampa').dispatchEvent(new Event('change'));
         }
     };
