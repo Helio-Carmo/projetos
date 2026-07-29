@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Cortes - Módulo Termoacústico</title>
+    <title>Calculadora de Cortes - Meliponário</title>
     <style>
         :root {
             --bg-color: #f4f1ea;
@@ -120,6 +120,16 @@
             margin-top: 10px;
             font-style: italic;
         }
+
+        .info-msg {
+            background-color: #fff3cd;
+            color: #856404;
+            border-left: 4px solid #ffeeba;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 <body>
@@ -127,11 +137,23 @@
 <div class="container">
     <header>
         <h1>Calculadora de Cortes</h1>
-        <p>Módulos Termoacústicos (Montagem Cata-Vento)</p>
+        <p>Módulos para Meliponário (Montagem Cata-Vento)</p>
     </header>
 
     <div class="card">
         <form id="calcForm">
+            <div class="form-group">
+                <label>Tipo de Caixa</label>
+                <select id="tipoCaixa">
+                    <option value="simples">Caixa Simples (Madeira Maciça)</option>
+                    <option value="sanduiche">Caixa Sanduíche (Dupla com Isopor)</option>
+                </select>
+            </div>
+
+            <div id="msgSanduiche" class="info-msg" style="display:none;">
+                🐝 <strong>Modo Termoacústico:</strong> Você selecionou o modelo sanduíche. Este formato usará 3 camadas (Madeira + Isopor + Madeira) para criar um isolamento térmico excelente para a colônia.
+            </div>
+
             <div class="grid-2">
                 <div class="form-group">
                     <label>Medida Interna Livre (cm)</label>
@@ -141,9 +163,9 @@
                     <label>Espessura da Madeira (cm)</label>
                     <input type="number" id="espessuraMadeira" step="0.1" required placeholder="Ex: 2">
                 </div>
-                <div class="form-group">
+                <div class="form-group" id="grupoIsopor" style="display:none;">
                     <label>Espessura do Isopor/EPS (cm)</label>
-                    <input type="number" id="espessuraIsopor" step="0.1" required placeholder="Ex: 1">
+                    <input type="number" id="espessuraIsopor" step="0.1" placeholder="Ex: 1">
                 </div>
                 <div class="form-group">
                     <label>Modelo da Tampa</label>
@@ -165,19 +187,19 @@
     </div>
 
     <div class="card" id="resultado">
-        <h2>Lista de Cortes por Módulo/Caixa</h2>
+        <h2>Lista de Cortes por Módulo</h2>
         
         <div class="result-box">
-            <strong>1. Parede Dupla (Montagem Cata-Vento)</strong>
+            <strong>1. Estrutura do Módulo (Montagem Cata-Vento)</strong>
             <div class="result-item">
-                <span>Camada Interna (Madeira)</span>
+                <span id="labelInterna">Parede do Módulo</span>
                 <strong id="resInterna"></strong>
             </div>
-            <div class="result-item">
+            <div class="result-item" id="itemIsopor" style="display:none;">
                 <span>Recheio (Isopor)</span>
                 <strong id="resIsopor"></strong>
             </div>
-            <div class="result-item">
+            <div class="result-item" id="itemExterna" style="display:none;">
                 <span>Camada Externa (Madeira)</span>
                 <strong id="resExterna"></strong>
             </div>
@@ -200,53 +222,90 @@
 </div>
 
 <script>
-    // Mostrar/Ocultar campo de aba dependendo da escolha da tampa
+    // Mostrar/Ocultar campos dependendo do tipo de caixa e tampa
     document.getElementById('modeloTampa').addEventListener('change', function() {
         document.getElementById('grupoAba').style.display = this.value === 'chapeu' ? 'block' : 'none';
     });
 
+    document.getElementById('tipoCaixa').addEventListener('change', function() {
+        const isSanduiche = this.value === 'sanduiche';
+        document.getElementById('grupoIsopor').style.display = isSanduiche ? 'block' : 'none';
+        document.getElementById('msgSanduiche').style.display = isSanduiche ? 'block' : 'none';
+    });
+
     // Função principal de cálculo
     function calcular() {
+        const tipo = document.getElementById('tipoCaixa').value;
         const interna = parseFloat(document.getElementById('medidaInterna').value);
         const mad = parseFloat(document.getElementById('espessuraMadeira').value);
-        const isopor = parseFloat(document.getElementById('espessuraIsopor').value);
+        const isopor = parseFloat(document.getElementById('espessuraIsopor').value) || 0;
         const modelo = document.getElementById('modeloTampa').value;
         const aba = parseFloat(document.getElementById('tamanhoAba').value) || 0;
 
-        if(!interna || !mad || !isopor) {
-            alert("Preencha todas as medidas obrigatórias!");
+        if(!interna || !mad) {
+            alert("Preencha as medidas internas e da madeira!");
             return;
         }
 
+        if(tipo === 'sanduiche' && !isopor) {
+            alert("Para a caixa sanduíche, preencha a espessura do isopor!");
+            return;
+        }
+
+        let tamFundo = 0;
+        let tamTampa = 0;
+
         // Cálculos matemáticos do Cata-Vento
-        const compInterna = interna + mad;
-        const medidaExternaInterna = interna + (mad * 2);
-        
-        const compIsopor = medidaExternaInterna + isopor;
-        const medidaExternaIsopor = medidaExternaInterna + (isopor * 2);
-        
-        const compExterna = medidaExternaIsopor + mad;
-        const medidaTotalExterna = medidaExternaIsopor + (mad * 2);
+        if(tipo === 'simples') {
+            // Caixa Simples
+            const compParede = interna + mad;
+            const medidaTotalExterna = interna + (mad * 2);
+            
+            document.getElementById('labelInterna').innerText = "Madeira (Parede Única)";
+            document.getElementById('resInterna').innerText = `4 peças de ${compParede} cm`;
+            
+            document.getElementById('itemIsopor').style.display = 'none';
+            document.getElementById('itemExterna').style.display = 'none';
 
-        const tamFundo = medidaTotalExterna;
-        const tamTampa = modelo === 'chapeu' ? medidaTotalExterna + (aba * 2) : medidaTotalExterna;
+            tamFundo = medidaTotalExterna;
+            tamTampa = modelo === 'chapeu' ? medidaTotalExterna + (aba * 2) : medidaTotalExterna;
+        } else {
+            // Caixa Sanduíche
+            const compInterna = interna + mad;
+            const medidaExternaInterna = interna + (mad * 2);
+            
+            const compIsopor = medidaExternaInterna + isopor;
+            const medidaExternaIsopor = medidaExternaInterna + (isopor * 2);
+            
+            const compExterna = medidaExternaIsopor + mad;
+            const medidaTotalExterna = medidaExternaIsopor + (mad * 2);
 
-        // Exibir resultados
-        document.getElementById('resInterna').innerText = `4 peças de ${compInterna} cm`;
-        document.getElementById('resIsopor').innerText = `4 peças de ${compIsopor} cm`;
-        document.getElementById('resExterna').innerText = `4 peças de ${compExterna} cm`;
+            document.getElementById('labelInterna').innerText = "Camada Interna (Madeira)";
+            document.getElementById('resInterna').innerText = `4 peças de ${compInterna} cm`;
+            
+            document.getElementById('resIsopor').innerText = `4 peças de ${compIsopor} cm`;
+            document.getElementById('itemIsopor').style.display = 'flex';
+            
+            document.getElementById('resExterna').innerText = `4 peças de ${compExterna} cm`;
+            document.getElementById('itemExterna').style.display = 'flex';
+
+            tamFundo = medidaTotalExterna;
+            tamTampa = modelo === 'chapeu' ? medidaTotalExterna + (aba * 2) : medidaTotalExterna;
+        }
+
+        // Exibir Fundo e Tampa
         document.getElementById('resFundo').innerText = `1 placa de ${tamFundo} x ${tamFundo} cm`;
         document.getElementById('resTampa').innerText = `1 placa de ${tamTampa} x ${tamTampa} cm`;
 
         document.getElementById('resultado').style.display = 'block';
 
         // Salvar na memória do navegador
-        salvarDados({ interna, mad, isopor, modelo, aba });
+        salvarDados({ tipo, interna, mad, isopor, modelo, aba });
     }
 
     // Salvar no LocalStorage
     function salvarDados(dados) {
-        localStorage.setItem('config_meliponario', JSON.stringify(dados));
+        localStorage.setItem('config_meliponario_v2', JSON.stringify(dados));
         const status = document.getElementById('status');
         status.innerText = "Medidas salvas na memória deste dispositivo!";
         setTimeout(() => status.innerText = "", 3000);
@@ -254,21 +313,20 @@
 
     // Carregar dados ao abrir a página
     window.onload = function() {
-        const saved = localStorage.getItem('config_meliponario');
+        const saved = localStorage.getItem('config_meliponario_v2');
         if(saved) {
             const dados = JSON.parse(saved);
+            
+            document.getElementById('tipoCaixa').value = dados.tipo || 'simples';
             document.getElementById('medidaInterna').value = dados.interna;
             document.getElementById('espessuraMadeira').value = dados.mad;
             document.getElementById('espessuraIsopor').value = dados.isopor;
-            document.getElementById('modeloTampa').value = dados.modelo;
+            document.getElementById('modeloTampa').value = dados.modelo || 'reta';
             document.getElementById('tamanhoAba').value = dados.aba;
             
-            if(dados.modelo === 'chapeu') {
-                document.getElementById('grupoAba').style.display = 'block';
-            }
-            
-            // Opcional: já calcular automaticamente se houver dados
-            // calcular(); 
+            // Disparar eventos para ajustar a tela (mostrar/esconder campos adequados)
+            document.getElementById('tipoCaixa').dispatchEvent(new Event('change'));
+            document.getElementById('modeloTampa').dispatchEvent(new Event('change'));
         }
     };
 </script>
