@@ -79,6 +79,7 @@
     #impressao tr.destaque td { font-weight: 700; }
     #impressao tr.geral td { font-weight: 700; font-size: 13px; background: #e3f1f1; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     #impressao .resumo { width: 60%; }
+    #impressao .regras { font-size: 11px; line-height: 1.6; border: 1px solid #999; padding: 6px 8px; page-break-inside: avoid; }
     #impressao .declaracao { margin-top: 18px; }
     #impressao .assinaturas { display: flex; gap: 40px; margin-top: 50px; page-break-inside: avoid; }
     #impressao .assinaturas div { flex: 1; text-align: center; border-top: 1px solid #000; padding-top: 4px; }
@@ -571,6 +572,12 @@ function montarImpressao() {
       <tbody>${linhasDias}</tbody>
     </table>
 
+    <h2>Regras aplicadas</h2>
+    <div class="regras">
+      <b>Dias úteis</b> (acumulado na competência): até 25h = 50% · de 25h a 40h = 60% · de 40h a 60h = 80% · acima de 60h = 100%<br>
+      <b>Sábado, domingo e feriado</b> (por dia): até 8h = 100% · o que passar de 8h = 150%
+    </div>
+
     <p class="declaracao">Declaro que as horas extras acima conferem com as efetivamente realizadas no período.</p>
     <p>Data: ____/____/________</p>
 
@@ -884,8 +891,33 @@ function desenharHistorico() {
   const itens = historico.map((r, i) => ({ r, i })).reverse()
     .filter(({ r }) => !filtro || `${r['Funcionário']} ${r['Mês']}`.toLowerCase().includes(filtro));
   $('tbHist').innerHTML = itens.length ? itens.map(({ r, i }) =>
-    `<tr data-i="${i}" title="Clique para carregar"><td>${r['Funcionário']}</td><td>${r['Mês']}</td><td class="num">${brl(numBr(r['Total geral']))}</td></tr>`
+    `<tr data-i="${i}" title="Clique para carregar"><td>${esc(r['Funcionário'])}</td><td>${esc(r['Mês'])}</td><td class="num">${brl(numBr(r['Total geral']))}</td>
+      <td><button class="sec" data-del="${i}" title="Excluir do histórico">✕</button></td></tr>`
   ).join('') : `<tr><td class="muted">${historico.length ? 'Nenhum registro encontrado.' : 'Histórico vazio.'}</td></tr>`;
+}
+
+async function excluirDoHistorico(reg) {
+  const nome = reg['Funcionário'], mes = reg['Mês'];
+  if (!confirm(`Excluir do histórico o registro de ${nome} — ${mes}?`)) return;
+  status('Excluindo...');
+  // Relê o arquivo antes de gravar, como no salvamento, para não apagar registros gravados por outra pessoa
+  for (let tentativa = 1; tentativa <= 2; tentativa++) {
+    try {
+      const regs = parseHistorico(await backend().ler()).filter(l => !(l['Funcionário'] === nome && l['Mês'] === mes));
+      await backend().gravar(gerarHistorico(regs), `Histórico HE: exclui ${nome} - ${mes}`);
+      historico = regs;
+      desenharHistorico();
+      status(`Excluído: ${nome} — ${mes}`, 'ok');
+      return;
+    } catch (e) {
+      if (e.status === 409 && tentativa === 1) continue;
+      const msg = e.name === 'NoModificationAllowedError' || e.name === 'InvalidStateError'
+        ? 'O arquivo parece estar aberto no Excel. Feche-o e tente novamente.'
+        : 'Erro ao excluir: ' + e.message;
+      status(msg, 'falha');
+      return;
+    }
+  }
 }
 
 async function salvarHistorico() {
@@ -1109,6 +1141,7 @@ $('btnAbrirHist').addEventListener('click', abrirArquivoHistorico);
 $('btnAtualizarHist').addEventListener('click', atualizarHistorico);
 $('histFiltro').addEventListener('input', desenharHistorico);
 $('tbHist').addEventListener('click', e => {
+  if (e.target.dataset.del !== undefined) { excluirDoHistorico(historico[Number(e.target.dataset.del)]); return; }
   const tr = e.target.closest('tr[data-i]');
   if (tr) carregarDoHistorico(historico[Number(tr.dataset.i)]);
 });
