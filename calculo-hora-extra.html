@@ -63,7 +63,7 @@
   <section>
     <details class="card no-print" id="cfgPainel">
       <summary>Configurações</summary>
-      <p class="muted" style="margin-top:4px">Ficam salvas neste navegador e já vêm preenchidas sempre que a página for aberta.</p>
+      <p class="muted" style="margin-top:4px" id="syncStatus"></p>
 
       <h3>Período da folha</h3>
       <div class="row">
@@ -106,8 +106,10 @@
             <input id="ghToken" type="password" placeholder="github_pat_..." style="width:340px">
           </label>
           <button class="sec" id="btnTestarGh">Testar conexão</button>
+          <button class="sec" id="btnLinkCfg">Copiar link de configuração</button>
         </div>
         <p class="muted">Use um repositório <b>privado</b> para os dados (contém salários). Crie um token <i>fine-grained</i> com acesso só a esse repositório e permissão <b>Contents: Read and write</b>.</p>
+        <p class="muted">O <b>link de configuração</b> já leva o token: quem abrir o link uma vez fica com a página configurada naquele navegador. Trate o link como uma senha e envie só para quem pode acessar os dados.</p>
       </div>
 
       <h3>Backup</h3>
@@ -220,6 +222,9 @@
 <script>
 const STORAGE_KEY = 'calculoHE.v1';
 const TOKEN_KEY = 'calculoHE.token';
+// Repositório privado onde ficam o histórico e as configurações compartilhadas
+const REPO_PADRAO = { owner: 'Helio-Carmo', repo: 'privados', branch: 'main', caminho: 'historico.csv' };
+const CONFIG_ARQUIVO = 'config.json';
 const DIAS_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
@@ -245,7 +250,10 @@ function carregar() {
 }
 const state = Object.assign({ funcionarios: {}, feriados: [], opcoes: {}, historico: {}, ultimo: '' }, carregar());
 state.opcoes = Object.assign({ carnaval: false, corpus: false, dsrUteis: 25, dsrDescanso: 5, diaInicio: 1, diaFim: 31 }, state.opcoes);
-state.historico = Object.assign({ modo: 'local', owner: '', repo: '', branch: 'main', caminho: 'historico.csv' }, state.historico);
+state.historico = Object.assign({}, state.historico);
+Object.entries(REPO_PADRAO).forEach(([k, v]) => { if (!state.historico[k]) state.historico[k] = v; });
+// GitHub é o padrão, a menos que o usuário tenha escolhido o arquivo local
+if (!state.historico.modoEscolhido) state.historico.modo = 'github';
 // Versões anteriores guardavam os lançamentos por mês/dia; agora são por data (AAAA-MM-DD)
 Object.values(state.funcionarios).forEach(f => {
   f.lanc = f.lanc || {};
@@ -259,6 +267,17 @@ function salvar() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
 }
 function lerToken() { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; } }
+function gravarToken(t) { try { localStorage.setItem(TOKEN_KEY, t); } catch {} }
+
+// Link de configuração (...#chave=<token>): grava o token neste navegador e tira ele da barra de endereço
+const configuradoPorLink = (() => {
+  const m = location.hash.match(/chave=([^&]+)/);
+  if (!m) return false;
+  gravarToken(decodeURIComponent(m[1]));
+  state.historico.modo = 'github';
+  history.replaceState(null, '', location.pathname + location.search);
+  return true;
+})();
 
 // ---------- Datas e período ----------
 function somaDias(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
@@ -608,15 +627,16 @@ const backendLocal = {
 };
 
 // --- Armazenamento: GitHub (cada gravação vira um commit) ---
-let ghSha = null; // versão do arquivo lida por último, exigida pela API para atualizar
+let ghShas = {}; // versão de cada arquivo lida por último, exigida pela API para atualizar
 
 function ghCfg() {
   const c = state.historico, token = lerToken();
   if (!c.owner || !c.repo || !token) throw new Error('Configure usuário, repositório e token do GitHub em Configurações.');
   return { ...c, token };
 }
-function ghUrl(c) {
-  const caminho = (c.caminho || 'historico.csv').split('/').map(encodeURIComponent).join('/');
+const ghConfigurado = () => state.historico.modo === 'github' && !!state.historico.owner && !!state.historico.repo && !!lerToken();
+function ghUrl(c, arquivo) {
+  const caminho = arquivo.split('/').map(encodeURIComponent).join('/');
   return `https://api.github.com/repos/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}/contents/${caminho}`;
 }
 async function ghFetch(url, c, opts = {}) {
@@ -635,24 +655,128 @@ async function ghFetch(url, c, opts = {}) {
 const b64encode = s => { let bin = ''; new TextEncoder().encode(s).forEach(b => { bin += String.fromCharCode(b); }); return btoa(bin); };
 const b64decode = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g, '')), ch => ch.charCodeAt(0)));
 
+async function ghLer(arquivo) {
+  const c = ghCfg();
+  const r = await ghFetch(`${ghUrl(c, arquivo)}?ref=${encodeURIComponent(c.branch)}`, c);
+  if (r.status === 404) { delete ghShas[arquivo]; return ''; } // arquivo ainda não existe: será criado no primeiro salvamento
+  const j = await r.json();
+  ghShas[arquivo] = j.sha;
+  return b64decode(j.content);
+}
+async function ghGravar(arquivo, texto, mensagem) {
+  const c = ghCfg();
+  const body = { message: mensagem, content: b64encode(texto), branch: c.branch };
+  if (ghShas[arquivo]) body.sha = ghShas[arquivo];
+  const r = await ghFetch(ghUrl(c, arquivo), c, { method: 'PUT', body: JSON.stringify(body) });
+  if (r.status === 404) throw new Error('Repositório ou branch não encontrado (ou o token não tem acesso a ele).');
+  ghShas[arquivo] = (await r.json()).content.sha;
+}
+
+const arquivoHistorico = () => state.historico.caminho || 'historico.csv';
 const backendGithub = {
-  async ler() {
-    const c = ghCfg();
-    const r = await ghFetch(`${ghUrl(c)}?ref=${encodeURIComponent(c.branch)}`, c);
-    if (r.status === 404) { ghSha = null; return ''; } // arquivo ainda não existe: será criado no primeiro salvamento
-    const j = await r.json();
-    ghSha = j.sha;
-    return b64decode(j.content);
-  },
-  async gravar(texto, mensagem) {
-    const c = ghCfg();
-    const body = { message: mensagem, content: b64encode(texto), branch: c.branch };
-    if (ghSha) body.sha = ghSha;
-    const r = await ghFetch(ghUrl(c), c, { method: 'PUT', body: JSON.stringify(body) });
-    if (r.status === 404) throw new Error('Repositório ou branch não encontrado (ou o token não tem acesso a ele).');
-    ghSha = (await r.json()).content.sha;
-  },
+  ler: () => ghLer(arquivoHistorico()),
+  gravar: (texto, mensagem) => ghGravar(arquivoHistorico(), texto, mensagem),
 };
+
+// --- Configurações compartilhadas (config.json no repositório) ---
+// Feriados, período da folha, DSR e cadastro de funcionários (salário/divisor) ficam iguais em todos os computadores.
+// Os lançamentos do dia a dia continuam no navegador e vão para o repositório pelo "Salvar no histórico".
+function syncStatus(msg, tipo = '') {
+  $('syncStatus').textContent = msg;
+  $('syncStatus').style.color = tipo === 'falha' ? '#c0392b' : tipo === 'ok' ? 'var(--ok)' : '';
+}
+
+function dadosCompartilhados() {
+  const { carnaval, corpus, dsrUteis, dsrDescanso, diaInicio, diaFim } = state.opcoes;
+  return {
+    opcoes: { carnaval, corpus, dsrUteis, dsrDescanso, diaInicio, diaFim },
+    feriados: state.feriados,
+    funcionarios: Object.fromEntries(Object.entries(state.funcionarios)
+      .map(([nome, f]) => [nome, { salario: f.salario, divisor: f.divisor }])),
+  };
+}
+
+async function baixarConfig() {
+  const texto = await ghLer(CONFIG_ARQUIVO);
+  if (!texto) return false;
+  const d = JSON.parse(texto);
+  Object.assign(state.opcoes, d.opcoes || {});
+  state.feriados = d.feriados || [];
+  Object.entries(d.funcionarios || {}).forEach(([nome, f]) =>
+    Object.assign(garantirFunc(nome), { salario: f.salario, divisor: f.divisor }));
+  salvar();
+  return true;
+}
+
+let syncTimer = null;
+async function enviarConfig() {
+  clearTimeout(syncTimer);
+  syncTimer = null;
+  if (!ghConfigurado()) return;
+  syncStatus('Sincronizando configurações...');
+  for (let tentativa = 1; tentativa <= 2; tentativa++) {
+    try {
+      await ghLer(CONFIG_ARQUIVO); // pega a versão atual para poder sobrescrever
+      await ghGravar(CONFIG_ARQUIVO, JSON.stringify(dadosCompartilhados(), null, 2) + '\n', 'Configurações HE');
+      syncStatus(`Configurações sincronizadas com ${state.historico.owner}/${state.historico.repo}.`, 'ok');
+      return;
+    } catch (e) {
+      if (e.status === 409 && tentativa === 1) continue;
+      syncStatus('Não foi possível sincronizar as configurações: ' + e.message, 'falha');
+      return;
+    }
+  }
+}
+
+// Salva no navegador e agenda o envio ao repositório (agrupa várias alterações seguidas num só commit)
+function salvarCompartilhado() {
+  salvar();
+  if (!ghConfigurado()) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(enviarConfig, 3000);
+  syncStatus('Alterações pendentes de sincronização...');
+}
+
+async function sincronizarTudo() {
+  if (!ghConfigurado()) {
+    syncStatus(state.historico.modo === 'github'
+      ? 'Sem token do GitHub neste navegador: abra o link de configuração ou informe o token abaixo. Por enquanto, tudo fica salvo só aqui.'
+      : 'Modo arquivo local: as configurações ficam salvas só neste navegador.');
+    iniciarHistorico();
+    return;
+  }
+  syncStatus('Carregando configurações do repositório...');
+  try {
+    if (await baixarConfig()) {
+      syncStatus(`Configurações carregadas de ${state.historico.owner}/${state.historico.repo}.`, 'ok');
+      preencherConfiguracoes();
+      renderFeriados();
+      renderListaFunc();
+      carregarFuncionario();
+    } else {
+      await enviarConfig(); // primeira vez: publica as configurações deste navegador
+    }
+  } catch (e) {
+    syncStatus('Não foi possível carregar as configurações: ' + e.message, 'falha');
+  }
+  iniciarHistorico();
+}
+
+async function copiarLinkConfiguracao() {
+  const token = lerToken();
+  if (!token) { alert('Informe o token primeiro.'); return; }
+  if (!location.protocol.startsWith('http')) {
+    alert('Abra a página pelo endereço do GitHub Pages (https://...github.io/...) para gerar o link. Aberta como arquivo local, o link não funcionaria em outros computadores.');
+    return;
+  }
+  const link = `${location.origin}${location.pathname}#chave=${encodeURIComponent(token)}`;
+  try {
+    await navigator.clipboard.writeText(link);
+    alert('Link de configuração copiado. Envie só para quem pode acessar os dados.');
+  } catch {
+    prompt('Copie o link de configuração:', link);
+  }
+}
 
 const backend = () => state.historico.modo === 'github' ? backendGithub : backendLocal;
 
@@ -728,6 +852,7 @@ function carregarDoHistorico(reg) {
   $('mes').value = comp;
   renderListaFunc();
   carregarFuncionario();
+  salvarCompartilhado();
   const completo = temLanc || Object.keys(atual).length > 0;
   status(completo
     ? `Carregado: ${nome} — ${reg['Mês']}`
@@ -812,7 +937,7 @@ function alterarDiaFolha() {
   const dia = id => Math.min(31, Math.max(1, Math.round(Number($(id).value)) || 1));
   state.opcoes.diaInicio = dia('cfgInicio');
   state.opcoes.diaFim = dia('cfgFim');
-  salvar();
+  salvarCompartilhado();
   renderDias();
 }
 
@@ -841,27 +966,29 @@ $('nome').addEventListener('change', carregarFuncionario);
 $('mes').addEventListener('change', renderDias);
 ['salario', 'divisor'].forEach(id => $(id).addEventListener('input', () => {
   const f = funcAtual();
-  if (f) { f.salario = Number($('salario').value) || 0; f.divisor = Number($('divisor').value) || 220; salvar(); renderListaFunc(); }
+  if (f) { f.salario = Number($('salario').value) || 0; f.divisor = Number($('divisor').value) || 220; salvarCompartilhado(); renderListaFunc(); }
   calcular();
 }));
 ['cfgInicio', 'cfgFim'].forEach(id => $(id).addEventListener('change', alterarDiaFolha));
 ['dsrUteis', 'dsrDescanso'].forEach(id => $(id).addEventListener('input', () => {
   state.opcoes[id] = Number($(id).value) || 0;
-  salvar();
+  salvarCompartilhado();
   calcular();
 }));
 $('cfgModo').addEventListener('change', () => {
   state.historico.modo = $('cfgModo').value;
+  state.historico.modoEscolhido = true;
   salvar();
   aplicarModoHistorico();
-  iniciarHistorico();
+  sincronizarTudo();
 });
 [['ghOwner', 'owner'], ['ghRepo', 'repo'], ['ghBranch', 'branch'], ['ghCaminho', 'caminho']].forEach(([id, campo]) =>
-  $(id).addEventListener('change', () => { state.historico[campo] = $(id).value.trim(); ghSha = null; salvar(); }));
-$('ghToken').addEventListener('change', () => {
-  try { localStorage.setItem(TOKEN_KEY, $('ghToken').value.trim()); } catch {}
-});
-$('btnTestarGh').addEventListener('click', iniciarHistorico);
+  $(id).addEventListener('change', () => { state.historico[campo] = $(id).value.trim(); ghShas = {}; salvar(); }));
+$('ghToken').addEventListener('change', () => gravarToken($('ghToken').value.trim()));
+$('btnTestarGh').addEventListener('click', sincronizarTudo);
+$('btnLinkCfg').addEventListener('click', copiarLinkConfiguracao);
+// Envia alterações pendentes se a página for fechada antes do agrupamento terminar
+window.addEventListener('pagehide', () => { if (syncTimer) enviarConfig(); });
 $('btnBackup').addEventListener('click', exportarBackup);
 $('btnRestaurar').addEventListener('click', () => $('arqBackup').click());
 $('arqBackup').addEventListener('change', importarBackup);
@@ -870,7 +997,7 @@ $('btnExcluir').addEventListener('click', () => {
   const nome = $('nome').value.trim();
   if (!state.funcionarios[nome] || !confirm(`Excluir "${nome}" e todos os lançamentos?`)) return;
   delete state.funcionarios[nome];
-  salvar(); renderListaFunc();
+  salvarCompartilhado(); renderListaFunc();
   $('nome').value = ''; carregarFuncionario();
 });
 $('btnLimpar').addEventListener('click', () => {
@@ -889,31 +1016,33 @@ $('tbHist').addEventListener('click', e => {
   const tr = e.target.closest('tr[data-i]');
   if (tr) carregarDoHistorico(historico[Number(tr.dataset.i)]);
 });
-$('optCarnaval').addEventListener('change', e => { state.opcoes.carnaval = e.target.checked; salvar(); renderDias(); });
-$('optCorpus').addEventListener('change', e => { state.opcoes.corpus = e.target.checked; salvar(); renderDias(); });
+$('optCarnaval').addEventListener('change', e => { state.opcoes.carnaval = e.target.checked; salvarCompartilhado(); renderDias(); });
+$('optCorpus').addEventListener('change', e => { state.opcoes.corpus = e.target.checked; salvarCompartilhado(); renderDias(); });
 $('btnAddFeriado').addEventListener('click', () => {
   const data = $('fData').value, nome = $('fNome').value.trim();
   if (!data || !nome) { alert('Informe data e nome do feriado.'); return; }
   state.feriados.push({ data, nome, anual: $('fAnual').checked });
-  salvar(); renderFeriados(); renderDias();
+  salvarCompartilhado(); renderFeriados(); renderDias();
   $('fData').value = ''; $('fNome').value = '';
 });
 $('tbFeriados').addEventListener('click', e => {
   const i = e.target.dataset.rm;
   if (i === undefined) return;
   state.feriados.splice(Number(i), 1);
-  salvar(); renderFeriados(); renderDias();
+  salvarCompartilhado(); renderFeriados(); renderDias();
 });
 
 // ---------- Início ----------
-salvar(); // grava a migração de formato, se houve
+salvar(); // grava a migração de formato e o token do link, se houver
 preencherConfiguracoes();
 $('mes').value = competenciaAtual();
 $('nome').value = state.ultimo || '';
 renderListaFunc();
 renderFeriados();
 carregarFuncionario();
-iniciarHistorico();
+sincronizarTudo().then(() => {
+  if (configuradoPorLink) alert('Página configurada neste navegador. Das próximas vezes, basta abrir o endereço normal.');
+});
 </script>
 </body>
 </html>
