@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cálculo de Horas Extras</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg: #f4f6f9; --card: #fff; --text: #1f2933; --muted: #6b7785; --border: #dde3ea;
+    --accent: #1f5fae; --weekend: #fff4e0; --holiday: #fde8e8; --ok: #1e7b45;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+  header { background: var(--accent); color: #fff; padding: 14px 24px; }
+  header h1 { margin: 0; font-size: 20px; }
+  main { max-width: 1250px; margin: 0 auto; padding: 16px; display: grid; grid-template-columns: 1fr 400px; gap: 16px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+  .card h2 { margin: 0 0 12px; font-size: 16px; }
+  .card h3 { margin: 16px 0 8px; font-size: 14px; }
+  details.card > summary { cursor: pointer; font-size: 16px; font-weight: 600; }
+  details.card[open] > summary { margin-bottom: 4px; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+  label.check { flex-direction: row; align-items: center; gap: 6px; }
+  input, select, button { font: inherit; padding: 6px 8px; border: 1px solid var(--border); border-radius: 5px; }
+  input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+  button { background: var(--accent); color: #fff; border: none; cursor: pointer; }
+  button.sec { background: #e6ebf1; color: var(--text); }
+  button.danger { background: #c0392b; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 5px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+  th { font-size: 12px; color: var(--muted); font-weight: 600; }
+  td.num, th.num { text-align: right; }
+  tr.fim { background: var(--weekend); }
+  tr.feriado { background: var(--holiday); }
+  .dias input { width: 80px; text-align: right; }
+  .tag { font-size: 11px; padding: 2px 6px; border-radius: 10px; background: #e6ebf1; white-space: nowrap; }
+  tr.fim .tag { background: #f6d9a6; }
+  tr.feriado .tag { background: #f5b5b5; }
+  #tbResumo tfoot td { font-weight: 600; }
+  #tbResumo tfoot tr.geral td { font-size: 17px; color: var(--ok); border-bottom: none; }
+  .muted { color: var(--muted); font-size: 12px; }
+  .lista { max-height: 240px; overflow: auto; }
+  .erro { outline: 2px solid #c0392b !important; }
+  #histStatus.ok { color: var(--ok); }
+  #histStatus.falha { color: #c0392b; }
+  #tbHist tr[data-i] { cursor: pointer; }
+  #tbHist tr[data-i]:hover { background: #eaf1fb; }
+  .oculto { display: none !important; }
+  @media print {
+    header, .no-print { display: none !important; }
+    main { grid-template-columns: 1fr; }
+    .card { border: none; }
+  }
+</style>
+</head>
+<body>
+<header><h1>Cálculo de Horas Extras</h1></header>
+
+<main>
+  <section>
+    <details class="card no-print" id="cfgPainel">
+      <summary>Configurações</summary>
+      <p class="muted" style="margin-top:4px">Ficam salvas neste navegador e já vêm preenchidas sempre que a página for aberta.</p>
+
+      <h3>Período da folha</h3>
+      <div class="row">
+        <label>Dia de início
+          <input id="cfgInicio" type="number" min="1" max="31" style="width:90px">
+        </label>
+        <label>Dia de fechamento
+          <input id="cfgFim" type="number" min="1" max="31" style="width:90px">
+        </label>
+      </div>
+      <p class="muted">Ex.: início 21 e fechamento 20 → a competência Setembro vai de 21/08 a 20/09. Para o mês cheio, use 1 e 31.</p>
+
+      <h3>DSR</h3>
+      <div class="row">
+        <label>Dias úteis
+          <input id="dsrUteis" type="number" step="1" min="1" style="width:90px">
+        </label>
+        <label>Domingos/feriados
+          <input id="dsrDescanso" type="number" step="1" min="0" style="width:90px">
+        </label>
+      </div>
+      <p class="muted">DSR = total de horas extras ÷ dias úteis × domingos/feriados.</p>
+
+      <h3>Histórico</h3>
+      <label>Salvar em
+        <select id="cfgModo" style="width:260px">
+          <option value="local">Arquivo neste computador</option>
+          <option value="github">Repositório no GitHub (commit)</option>
+        </select>
+      </label>
+      <div id="ghCampos" style="margin-top:10px">
+        <div class="row">
+          <label>Usuário ou organização <input id="ghOwner" placeholder="ex.: helio-carmo" style="width:170px"></label>
+          <label>Repositório <input id="ghRepo" placeholder="ex.: calculo-he-dados" style="width:170px"></label>
+          <label>Branch <input id="ghBranch" style="width:90px"></label>
+          <label>Arquivo <input id="ghCaminho" style="width:150px"></label>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <label>Token de acesso (fica só neste navegador)
+            <input id="ghToken" type="password" placeholder="github_pat_..." style="width:340px">
+          </label>
+          <button class="sec" id="btnTestarGh">Testar conexão</button>
+        </div>
+        <p class="muted">Use um repositório <b>privado</b> para os dados (contém salários). Crie um token <i>fine-grained</i> com acesso só a esse repositório e permissão <b>Contents: Read and write</b>.</p>
+      </div>
+
+      <h3>Backup</h3>
+      <div class="row">
+        <button class="sec" id="btnBackup">Exportar backup</button>
+        <button class="sec" id="btnRestaurar">Importar backup</button>
+        <input type="file" id="arqBackup" accept=".json" class="oculto">
+      </div>
+      <p class="muted">Salva funcionários, lançamentos, feriados e configurações num arquivo .json (o token não é incluído). Útil para levar tudo para outro computador ou navegador.</p>
+    </details>
+
+    <div class="card no-print">
+      <h2>Funcionário e competência</h2>
+      <div class="row">
+        <label>Funcionário
+          <input id="nome" list="listaFunc" placeholder="Nome" style="width:220px">
+          <datalist id="listaFunc"></datalist>
+        </label>
+        <label>Salário (R$)
+          <input id="salario" type="number" step="0.01" min="0" style="width:130px">
+        </label>
+        <label>Divisor mensal (h)
+          <input id="divisor" type="number" step="1" min="1" value="220" style="width:90px">
+        </label>
+        <label>Competência
+          <input id="mes" type="month">
+        </label>
+        <button class="danger" id="btnExcluir" title="Excluir funcionário salvo">Excluir funcionário</button>
+      </div>
+      <p class="muted">Valor da hora = salário ÷ divisor (44h semanais = 220 · 40h = 200). Os dados são salvos automaticamente neste navegador.</p>
+    </div>
+
+    <div class="card dias">
+      <h2 id="tituloMes">Lançamentos</h2>
+      <p class="muted no-print">Dia útil: informe as <b>horas extras</b>. Sábado/domingo/feriado: informe as <b>horas trabalhadas</b> no dia. Aceita "2", "2,5" ou "2:30".</p>
+      <table>
+        <thead><tr><th>Data</th><th>Dia</th><th>Tipo</th><th class="num">Horas</th><th class="num">Valor</th></tr></thead>
+        <tbody id="tbDias"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <aside>
+    <div class="card">
+      <h2>Resumo</h2>
+      <div id="resumoTopo" class="muted"></div>
+      <table id="tbResumo" style="margin-top:8px">
+        <thead><tr><th>Percentual</th><th class="num">Horas</th><th class="num">Valor da hora</th><th class="num">Total</th></tr></thead>
+        <tbody></tbody>
+        <tfoot>
+          <tr><td>TOTAL</td><td class="num" id="totHoras"></td><td></td><td class="num" id="totValor"></td></tr>
+          <tr><td>DSR</td><td></td><td></td><td class="num" id="totDsr"></td></tr>
+          <tr class="geral"><td colspan="2">TOTAL GERAL</td><td></td><td class="num" id="totGeral"></td></tr>
+        </tfoot>
+      </table>
+      <div class="row no-print" style="margin-top:12px">
+        <button onclick="window.print()">Imprimir</button>
+        <button class="sec" id="btnExcel">Exportar Excel</button>
+        <button class="sec" id="btnLimpar">Limpar competência</button>
+      </div>
+    </div>
+
+    <div class="card no-print">
+      <h2>Histórico</h2>
+      <p class="muted" style="margin-top:0" id="histDescricao"></p>
+      <div class="row">
+        <button id="btnSalvarHist">Salvar no histórico</button>
+        <button class="sec modo-local" id="btnNovoHist">Criar arquivo</button>
+        <button class="sec modo-local" id="btnAbrirHist">Abrir existente</button>
+        <button class="sec modo-github" id="btnAtualizarHist">Atualizar lista</button>
+      </div>
+      <p id="histStatus" class="muted"></p>
+      <input id="histFiltro" placeholder="Filtrar por nome ou mês..." style="width:100%;margin-bottom:6px">
+      <p class="muted" style="margin:0 0 6px">Clique num registro para carregá-lo na tela.</p>
+      <div class="lista">
+        <table><tbody id="tbHist"></tbody></table>
+      </div>
+    </div>
+
+    <div class="card no-print">
+      <h2>Regras aplicadas</h2>
+      <p class="muted" style="margin:0">
+        <b>Dias úteis</b> (acumulado na competência):<br>
+        até 25h = 50% · de 25h a 40h = 60% · de 40h a 60h = 80% · acima de 60h = 100%<br><br>
+        <b>Sábado, domingo e feriado</b> (por dia):<br>
+        até 8h = 100% · o que passar de 8h = 150%
+      </p>
+    </div>
+
+    <div class="card no-print">
+      <h2>Feriados</h2>
+      <label class="check"><input type="checkbox" id="optCarnaval"> Considerar Carnaval (seg e ter)</label>
+      <label class="check" style="margin-top:4px"><input type="checkbox" id="optCorpus"> Considerar Corpus Christi</label>
+      <p class="muted">Feriados nacionais já calculados automaticamente. Cadastre abaixo os estaduais/municipais:</p>
+      <div class="row">
+        <label>Data <input id="fData" type="date"></label>
+        <label>Nome <input id="fNome" placeholder="Ex.: Aniversário da cidade" style="width:150px"></label>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <label class="check"><input type="checkbox" id="fAnual" checked> Repete todo ano</label>
+        <button id="btnAddFeriado">Adicionar</button>
+      </div>
+      <div class="lista" style="margin-top:10px">
+        <table><tbody id="tbFeriados"></tbody></table>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<script>
+const STORAGE_KEY = 'calculoHE.v1';
+const TOKEN_KEY = 'calculoHE.token';
+const DIAS_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+// Faixas para dias úteis: limite superior acumulado na competência e adicional
+const FAIXAS_UTEIS = [
+  { ate: 25, pct: 50 },
+  { ate: 40, pct: 60 },
+  { ate: 60, pct: 80 },
+  { ate: Infinity, pct: 100 },
+];
+const LIMITE_DIA_ESPECIAL = 8, PCT_ESPECIAL = 100, PCT_ESPECIAL_EXCEDENTE = 150;
+const PERCENTUAIS = [50, 60, 80, 100, 150];
+
+const brl = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const num = (v, casas = 2) => v.toLocaleString('pt-BR', { maximumFractionDigits: casas });
+const round2 = v => Math.round((v + Number.EPSILON) * 100) / 100;
+const pad = n => String(n).padStart(2, '0');
+const $ = id => document.getElementById(id);
+
+// ---------- Estado ----------
+function carregar() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
+}
+const state = Object.assign({ funcionarios: {}, feriados: [], opcoes: {}, historico: {}, ultimo: '' }, carregar());
+state.opcoes = Object.assign({ carnaval: false, corpus: false, dsrUteis: 25, dsrDescanso: 5, diaInicio: 1, diaFim: 31 }, state.opcoes);
+state.historico = Object.assign({ modo: 'local', owner: '', repo: '', branch: 'main', caminho: 'historico.csv' }, state.historico);
+// Versões anteriores guardavam os lançamentos por mês/dia; agora são por data (AAAA-MM-DD)
+Object.values(state.funcionarios).forEach(f => {
+  f.lanc = f.lanc || {};
+  if (f.meses) {
+    Object.entries(f.meses).forEach(([mes, dias]) =>
+      Object.entries(dias).forEach(([d, v]) => { f.lanc[`${mes}-${pad(d)}`] = v; }));
+    delete f.meses;
+  }
+});
+function salvar() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+}
+function lerToken() { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; } }
+
+// ---------- Datas e período ----------
+function somaDias(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
+function chave(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+const dataBr = d => `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+const diasNoMes = (ano, mes) => new Date(ano, mes, 0).getDate(); // mes 1-12
+
+// Competência "2026-09" -> datas de início e fim conforme os dias de fechamento configurados
+function periodo(comp) {
+  const [a, m] = comp.split('-').map(Number);
+  const { diaInicio: ini, diaFim: fim } = state.opcoes;
+  let ia = a, im = m;
+  if (ini > fim) { im = m - 1; if (im === 0) { im = 12; ia = a - 1; } }
+  return {
+    ini: new Date(ia, im - 1, Math.min(ini, diasNoMes(ia, im))),
+    fim: new Date(a, m - 1, Math.min(fim, diasNoMes(a, m))),
+  };
+}
+function competenciaAtual() {
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  for (const delta of [0, 1, -1]) {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() + delta, 1);
+    const comp = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+    const p = periodo(comp);
+    if (hoje >= p.ini && hoje <= p.fim) return comp;
+  }
+  return `${hoje.getFullYear()}-${pad(hoje.getMonth() + 1)}`;
+}
+function nomeMes(comp) {
+  const [a, m] = comp.split('-');
+  return `${MESES[Number(m) - 1]}/${a}`;
+}
+function mesIsoDe(mesTxt) { // "Setembro/2026" -> "2026-09"
+  const [nomeM, ano] = mesTxt.split('/');
+  return `${ano}-${pad(MESES.indexOf(nomeM) + 1)}`;
+}
+function lancNoPeriodo(f, p) {
+  const de = chave(p.ini), ate = chave(p.fim), r = {};
+  Object.entries(f.lanc).forEach(([k, v]) => { if (k >= de && k <= ate) r[k] = v; });
+  return r;
+}
+
+// ---------- Feriados ----------
+function pascoa(ano) { // algoritmo de Meeus/Jones/Butcher
+  const a = ano % 19, b = Math.floor(ano / 100), c = ano % 100, d = Math.floor(b / 4), e = b % 4;
+  const f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const mes = Math.floor((h + l - 7 * m + 114) / 31), dia = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(ano, mes - 1, dia);
+}
+
+function feriadosDoAno(ano) {
+  const mapa = {};
+  const add = (d, nome) => { mapa[chave(d)] = nome; };
+  [[1,1,'Confraternização Universal'],[4,21,'Tiradentes'],[5,1,'Dia do Trabalho'],[9,7,'Independência'],
+   [10,12,'Nossa Sra. Aparecida'],[11,2,'Finados'],[11,15,'Proclamação da República'],
+   [11,20,'Consciência Negra'],[12,25,'Natal']].forEach(([m, d, n]) => add(new Date(ano, m - 1, d), n));
+  const p = pascoa(ano);
+  add(somaDias(p, -2), 'Sexta-feira Santa');
+  if (state.opcoes.carnaval) { add(somaDias(p, -48), 'Carnaval'); add(somaDias(p, -47), 'Carnaval'); }
+  if (state.opcoes.corpus) add(somaDias(p, 60), 'Corpus Christi');
+  state.feriados.forEach(f => {
+    if (f.anual) mapa[`${ano}-${f.data.slice(5)}`] = f.nome;
+    else if (f.data.startsWith(ano + '-')) mapa[f.data] = f.nome;
+  });
+  return mapa;
+}
+
+// ---------- Horas ----------
+function parseHoras(txt) {
+  txt = (txt || '').trim();
+  if (!txt) return 0;
+  const m = txt.match(/^(\d+):([0-5]?\d)$/);
+  if (m) return Number(m[1]) + Number(m[2]) / 60;
+  const n = Number(txt.replace(',', '.'));
+  return isFinite(n) && n >= 0 ? n : NaN;
+}
+
+// ---------- Tela ----------
+let resumo = null; // último cálculo, usado na exportação e no histórico
+
+function garantirFunc(nome) {
+  return state.funcionarios[nome] || (state.funcionarios[nome] = { salario: 0, divisor: 220, lanc: {} });
+}
+function funcAtual() {
+  const nome = $('nome').value.trim();
+  return nome ? garantirFunc(nome) : null;
+}
+
+function renderListaFunc() {
+  $('listaFunc').innerHTML = Object.keys(state.funcionarios).sort()
+    .map(n => `<option value="${n.replace(/"/g, '&quot;')}">`).join('');
+}
+
+function carregarFuncionario() {
+  const f = state.funcionarios[$('nome').value.trim()];
+  $('salario').value = f ? f.salario || '' : '';
+  $('divisor').value = f ? f.divisor || 220 : 220;
+  state.ultimo = $('nome').value.trim();
+  salvar();
+  renderDias();
+}
+
+function renderDias() {
+  const comp = $('mes').value;
+  const p = periodo(comp);
+  $('tituloMes').textContent = `Competência ${nomeMes(comp)} — ${dataBr(p.ini)} a ${dataBr(p.fim)}`;
+  const feriados = Object.assign(feriadosDoAno(p.ini.getFullYear()), feriadosDoAno(p.fim.getFullYear()));
+  const f = state.funcionarios[$('nome').value.trim()];
+  const lanc = f ? f.lanc : {};
+  let html = '';
+  for (let data = new Date(p.ini); data <= p.fim; data = somaDias(data, 1)) {
+    const k = chave(data), dow = data.getDay(), fer = feriados[k];
+    const tipo = fer ? 'feriado' : (dow === 0 || dow === 6 ? 'fim' : 'util');
+    const rotulo = fer ? `Feriado: ${fer}` : tipo === 'fim' ? 'Fim de semana' : 'Dia útil';
+    html += `<tr class="${tipo}" data-tipo="${tipo}">
+      <td>${pad(data.getDate())}/${pad(data.getMonth() + 1)}</td><td>${DIAS_SEMANA[dow]}</td>
+      <td><span class="tag">${rotulo}</span></td>
+      <td class="num"><input data-data="${k}" value="${lanc[k] || ''}" placeholder="0:00"></td>
+      <td class="num valor"></td></tr>`;
+  }
+  $('tbDias').innerHTML = html;
+  calcular();
+}
+
+function calcular() {
+  const salario = Number($('salario').value) || 0;
+  const divisor = Number($('divisor').value) || 220;
+  const valorHora = salario / divisor;
+  const horasPorPct = Object.fromEntries(PERCENTUAIS.map(p => [p, 0]));
+  const dias = [], lanc = {};
+  let horasUteis = 0, totalHoras = 0;
+
+  document.querySelectorAll('#tbDias tr').forEach(tr => {
+    const inp = tr.querySelector('input');
+    if (inp.value.trim()) lanc[inp.dataset.data] = inp.value.trim();
+    const h = parseHoras(inp.value);
+    inp.classList.toggle('erro', isNaN(h));
+    const horas = isNaN(h) ? 0 : h;
+    totalHoras += horas;
+    let valor = 0;
+    if (tr.dataset.tipo === 'util') {
+      // Distribui as horas do dia nas faixas conforme o acumulado da competência avança
+      let restante = horas, acum = horasUteis, inicio = 0;
+      for (const fx of FAIXAS_UTEIS) {
+        if (restante <= 0) break;
+        const usa = Math.min(restante, Math.max(0, fx.ate - Math.max(acum, inicio)));
+        horasPorPct[fx.pct] += usa;
+        valor += usa * valorHora * (1 + fx.pct / 100);
+        restante -= usa; acum += usa; inicio = fx.ate;
+      }
+      horasUteis += horas;
+    } else {
+      const normal = Math.min(horas, LIMITE_DIA_ESPECIAL), exced = Math.max(0, horas - LIMITE_DIA_ESPECIAL);
+      horasPorPct[PCT_ESPECIAL] += normal;
+      horasPorPct[PCT_ESPECIAL_EXCEDENTE] += exced;
+      valor = normal * valorHora * (1 + PCT_ESPECIAL / 100) + exced * valorHora * (1 + PCT_ESPECIAL_EXCEDENTE / 100);
+    }
+    tr.querySelector('.valor').textContent = horas ? brl(valor) : '';
+    if (horas) {
+      const tds = tr.querySelectorAll('td');
+      const [a, m, d] = inp.dataset.data.split('-');
+      dias.push({ data: `${d}/${m}/${a}`, dia: tds[1].textContent, tipo: tds[2].textContent.trim(), horas, valor: round2(valor) });
+    }
+  });
+
+  const linhas = PERCENTUAIS.filter(p => horasPorPct[p] > 0).map(pct => {
+    const vh = valorHora * (1 + pct / 100);
+    return { pct, horas: horasPorPct[pct], valorHora: vh, total: round2(horasPorPct[pct] * vh) };
+  });
+  const total = round2(linhas.reduce((s, l) => s + l.total, 0));
+  const dsrUteis = Number(state.opcoes.dsrUteis) || 25, dsrDescanso = Number(state.opcoes.dsrDescanso) || 0;
+  const dsr = round2(total / dsrUteis * dsrDescanso);
+  const geral = round2(total + dsr);
+
+  $('tbResumo').tBodies[0].innerHTML = linhas.length ? linhas.map(l =>
+    `<tr><td>${l.pct}%</td><td class="num">${num(l.horas)}</td><td class="num">${brl(l.valorHora)}</td><td class="num">${brl(l.total)}</td></tr>`
+  ).join('') : '<tr><td colspan="4" class="muted">Nenhuma hora lançada.</td></tr>';
+  $('resumoTopo').innerHTML = `${$('nome').value || '(sem nome)'} · Salário ${brl(salario)} · Hora normal ${brl(valorHora)}`;
+  $('totHoras').textContent = num(totalHoras);
+  $('totValor').textContent = brl(total);
+  $('totDsr').textContent = brl(dsr);
+  $('totGeral').textContent = brl(geral);
+
+  const p = periodo($('mes').value);
+  resumo = { nome: $('nome').value.trim(), mes: $('mes').value, periodo: `${dataBr(p.ini)} a ${dataBr(p.fim)}`,
+             salario, divisor, valorHora, linhas, horasPorPct, totalHoras, total, dsr, geral, dsrUteis, dsrDescanso, dias, lanc };
+}
+
+function salvarLancamento(e) {
+  if (e.target.tagName !== 'INPUT') return;
+  const f = funcAtual();
+  if (f) {
+    const k = e.target.dataset.data;
+    if (e.target.value.trim()) f.lanc[k] = e.target.value.trim();
+    else delete f.lanc[k];
+    salvar();
+    renderListaFunc();
+  }
+  calcular();
+}
+
+function renderFeriados() {
+  $('tbFeriados').innerHTML = state.feriados.length ? state.feriados
+    .map((f, i) => ({ ...f, i }))
+    .sort((a, b) => a.data.slice(5).localeCompare(b.data.slice(5)))
+    .map(f => {
+      const [a, m, d] = f.data.split('-');
+      return `<tr><td>${d}/${m}${f.anual ? '' : '/' + a}</td><td>${f.nome}</td>
+        <td class="muted">${f.anual ? 'anual' : ''}</td>
+        <td><button class="sec" data-rm="${f.i}">✕</button></td></tr>`;
+    }).join('') : '<tr><td class="muted">Nenhum feriado regional cadastrado.</td></tr>';
+}
+
+// ---------- Exportação Excel ----------
+function exportarExcel() {
+  if (!window.XLSX) {
+    alert('Não foi possível carregar o componente do Excel (precisa de internet). Use "Imprimir" como alternativa.');
+    return;
+  }
+  const r = resumo;
+  const aoa = [], fmts = [];
+  const MOEDA = '"R$" #,##0.00', HORAS = '0.00', PCT = '0%';
+  // Cada célula pode ser um valor ou [valor, formato]
+  const linha = (...cells) => {
+    const idx = aoa.length;
+    aoa.push(cells.map((c, col) => {
+      if (Array.isArray(c)) { fmts.push([idx, col, c[1]]); return c[0]; }
+      return c;
+    }));
+  };
+
+  linha('Cálculo de Horas Extras');
+  linha('Funcionário', r.nome || '');
+  linha('Competência', nomeMes(r.mes));
+  linha('Período', r.periodo);
+  linha('Salário', [r.salario, MOEDA]);
+  linha('Divisor', r.divisor);
+  linha('Valor hora normal', [r.valorHora, MOEDA]);
+  linha();
+  linha('Percentual', 'Horas', 'Valor da hora', 'Total');
+  r.linhas.forEach(l => linha([l.pct / 100, PCT], [l.horas, HORAS], [l.valorHora, MOEDA], [l.total, MOEDA]));
+  linha('TOTAL', [r.totalHoras, HORAS], '', [r.total, MOEDA]);
+  linha(`DSR (÷ ${r.dsrUteis} × ${r.dsrDescanso})`, '', '', [r.dsr, MOEDA]);
+  linha('TOTAL GERAL', '', '', [r.geral, MOEDA]);
+  linha();
+  linha('Lançamentos por dia');
+  linha('Data', 'Dia', 'Tipo', 'Horas', 'Valor');
+  r.dias.forEach(d => linha(d.data, d.dia, d.tipo, [d.horas, HORAS], [d.valor, MOEDA]));
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  fmts.forEach(([row, col, z]) => { const c = ws[XLSX.utils.encode_cell({ r: row, c: col })]; if (c) c.z = z; });
+  ws['!cols'] = [{ wch: 24 }, { wch: 24 }, { wch: 26 }, { wch: 14 }, { wch: 14 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Horas Extras');
+  XLSX.writeFile(wb, `HE_${r.nome || 'funcionario'}_${r.mes}.xlsx`);
+}
+
+// ---------- Histórico (historico.csv) ----------
+const HIST_CABECALHO = ['Registrado em', 'Funcionário', 'Mês', 'Período', 'Salário', 'Divisor', 'Valor hora',
+  ...PERCENTUAIS.map(p => `Horas ${p}%`), 'Total horas', 'Total HE', 'DSR', 'Total geral', 'Lançamentos'];
+let historico = []; // registros lidos do arquivo, como objetos { coluna: valor }
+
+const numBr = txt => Number(String(txt || '').replace(/\./g, '').replace(',', '.')) || 0;
+// Números no formato brasileiro (vírgula decimal, sem milhar) para o Excel reconhecer como número
+const csvNum = v => round2(v).toFixed(2).replace('.', ',');
+const csvLinha = campos => campos.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(';');
+
+function csvParseLinha(txt) {
+  const campos = [];
+  let atual = '', aspas = false;
+  for (let i = 0; i < txt.length; i++) {
+    const ch = txt[i];
+    if (aspas) {
+      if (ch === '"' && txt[i + 1] === '"') { atual += '"'; i++; }
+      else if (ch === '"') aspas = false;
+      else atual += ch;
+    } else if (ch === '"') aspas = true;
+    else if (ch === ';') { campos.push(atual); atual = ''; }
+    else atual += ch;
+  }
+  campos.push(atual);
+  return campos;
+}
+
+// Lê usando o cabeçalho do próprio arquivo, assim arquivos de versões anteriores continuam válidos
+function parseHistorico(texto) {
+  const linhas = texto.replace(/^﻿/, '').split(/\r?\n/).filter(l => l.trim());
+  if (!linhas.length) return [];
+  const cab = csvParseLinha(linhas[0]);
+  return linhas.slice(1).map(l => {
+    const campos = csvParseLinha(l), reg = {};
+    cab.forEach((c, i) => { reg[c] = campos[i] ?? ''; });
+    return reg;
+  });
+}
+const gerarHistorico = regs => '﻿' + [HIST_CABECALHO, ...regs.map(r => HIST_CABECALHO.map(c => r[c]))].map(csvLinha).join('\r\n') + '\r\n';
+
+// Lançamentos gravados como "2026-08-21=2:00|2026-08-22=3,5" (formato antigo: "1=2:00", dia da competência)
+const lancParaTexto = l => Object.entries(l).map(([d, v]) => `${d}=${v}`).join('|');
+function textoParaLanc(txt, comp) {
+  const l = {};
+  (txt || '').split('|').forEach(p => {
+    const [d, v] = p.split('=');
+    if (d && v) l[d.includes('-') ? d : `${comp}-${pad(d)}`] = v;
+  });
+  return l;
+}
+
+function status(msg, tipo = '') {
+  $('histStatus').textContent = msg;
+  $('histStatus').className = 'muted ' + tipo;
+}
+
+// --- Armazenamento: arquivo local (Edge/Chrome) ---
+function idb(modo, valor) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('calculoHE', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('kv');
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const st = req.result.transaction('kv', modo === 'get' ? 'readonly' : 'readwrite').objectStore('kv');
+      const q = modo === 'get' ? st.get('historico') : st.put(valor, 'historico');
+      q.onsuccess = () => resolve(q.result);
+      q.onerror = () => reject(q.error);
+    };
+  });
+}
+
+async function obterHandle() {
+  if (!window.showOpenFilePicker) throw new Error('Use o Microsoft Edge ou o Google Chrome para gravar o histórico em arquivo.');
+  const handle = await idb('get');
+  if (!handle) throw new Error('Nenhum arquivo vinculado. Clique em "Criar arquivo" ou "Abrir existente".');
+  const opts = { mode: 'readwrite' };
+  if (await handle.queryPermission(opts) === 'granted' || await handle.requestPermission(opts) === 'granted') return handle;
+  throw new Error('Sem permissão para acessar o arquivo de histórico.');
+}
+
+const backendLocal = {
+  async ler() { return (await (await obterHandle()).getFile()).text(); },
+  async gravar(texto) {
+    const w = await (await obterHandle()).createWritable();
+    await w.write(texto);
+    await w.close();
+  },
+};
+
+// --- Armazenamento: GitHub (cada gravação vira um commit) ---
+let ghSha = null; // versão do arquivo lida por último, exigida pela API para atualizar
+
+function ghCfg() {
+  const c = state.historico, token = lerToken();
+  if (!c.owner || !c.repo || !token) throw new Error('Configure usuário, repositório e token do GitHub em Configurações.');
+  return { ...c, token };
+}
+function ghUrl(c) {
+  const caminho = (c.caminho || 'historico.csv').split('/').map(encodeURIComponent).join('/');
+  return `https://api.github.com/repos/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}/contents/${caminho}`;
+}
+async function ghFetch(url, c, opts = {}) {
+  const r = await fetch(url, { cache: 'no-store', ...opts, headers: {
+    Authorization: `Bearer ${c.token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28',
+  } });
+  if (!r.ok && r.status !== 404) {
+    const msgs = { 401: 'Token inválido ou expirado.', 403: 'O token não tem permissão de escrita neste repositório (Contents: Read and write).',
+                   409: 'O arquivo foi alterado por outra pessoa.', 422: 'Dados rejeitados pelo GitHub (verifique a branch).' };
+    const e = new Error(msgs[r.status] || `GitHub respondeu ${r.status}.`);
+    e.status = r.status;
+    throw e;
+  }
+  return r;
+}
+const b64encode = s => { let bin = ''; new TextEncoder().encode(s).forEach(b => { bin += String.fromCharCode(b); }); return btoa(bin); };
+const b64decode = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g, '')), ch => ch.charCodeAt(0)));
+
+const backendGithub = {
+  async ler() {
+    const c = ghCfg();
+    const r = await ghFetch(`${ghUrl(c)}?ref=${encodeURIComponent(c.branch)}`, c);
+    if (r.status === 404) { ghSha = null; return ''; } // arquivo ainda não existe: será criado no primeiro salvamento
+    const j = await r.json();
+    ghSha = j.sha;
+    return b64decode(j.content);
+  },
+  async gravar(texto, mensagem) {
+    const c = ghCfg();
+    const body = { message: mensagem, content: b64encode(texto), branch: c.branch };
+    if (ghSha) body.sha = ghSha;
+    const r = await ghFetch(ghUrl(c), c, { method: 'PUT', body: JSON.stringify(body) });
+    if (r.status === 404) throw new Error('Repositório ou branch não encontrado (ou o token não tem acesso a ele).');
+    ghSha = (await r.json()).content.sha;
+  },
+};
+
+const backend = () => state.historico.modo === 'github' ? backendGithub : backendLocal;
+
+async function atualizarHistorico() {
+  try {
+    historico = parseHistorico(await backend().ler());
+    desenharHistorico();
+    return true;
+  } catch (e) {
+    status(e.message, 'falha');
+    return false;
+  }
+}
+
+function desenharHistorico() {
+  const filtro = $('histFiltro').value.trim().toLowerCase();
+  const itens = historico.map((r, i) => ({ r, i })).reverse()
+    .filter(({ r }) => !filtro || `${r['Funcionário']} ${r['Mês']}`.toLowerCase().includes(filtro));
+  $('tbHist').innerHTML = itens.length ? itens.map(({ r, i }) =>
+    `<tr data-i="${i}" title="Clique para carregar"><td>${r['Funcionário']}</td><td>${r['Mês']}</td><td class="num">${brl(numBr(r['Total geral']))}</td></tr>`
+  ).join('') : `<tr><td class="muted">${historico.length ? 'Nenhum registro encontrado.' : 'Histórico vazio.'}</td></tr>`;
+}
+
+async function salvarHistorico() {
+  const r = resumo;
+  if (!r.nome) { status('Informe o nome do funcionário.', 'falha'); return; }
+  const mesTxt = nomeMes(r.mes);
+  const novo = {
+    'Registrado em': new Date().toLocaleString('pt-BR'), 'Funcionário': r.nome, 'Mês': mesTxt, 'Período': r.periodo,
+    'Salário': csvNum(r.salario), 'Divisor': r.divisor, 'Valor hora': csvNum(r.valorHora),
+    ...Object.fromEntries(PERCENTUAIS.map(p => [`Horas ${p}%`, csvNum(r.horasPorPct[p])])),
+    'Total horas': csvNum(r.totalHoras), 'Total HE': csvNum(r.total), 'DSR': csvNum(r.dsr), 'Total geral': csvNum(r.geral),
+    'Lançamentos': lancParaTexto(r.lanc),
+  };
+  status('Salvando...');
+  // Relê o arquivo antes de gravar; se outra pessoa gravou no meio tempo (conflito no GitHub), tenta mais uma vez
+  for (let tentativa = 1; tentativa <= 2; tentativa++) {
+    try {
+      const regs = parseHistorico(await backend().ler()).filter(l => !(l['Funcionário'] === r.nome && l['Mês'] === mesTxt));
+      regs.push(novo);
+      await backend().gravar(gerarHistorico(regs), `Histórico HE: ${r.nome} - ${mesTxt}`);
+      historico = regs;
+      desenharHistorico();
+      status(`Salvo: ${r.nome} — ${mesTxt} (${brl(r.geral)})`, 'ok');
+      return;
+    } catch (e) {
+      if (e.status === 409 && tentativa === 1) continue;
+      const msg = e.name === 'NoModificationAllowedError' || e.name === 'InvalidStateError'
+        ? 'O arquivo parece estar aberto no Excel. Feche-o e tente novamente.'
+        : 'Erro ao salvar: ' + e.message;
+      status(msg, 'falha');
+      return;
+    }
+  }
+}
+
+function carregarDoHistorico(reg) {
+  const nome = reg['Funcionário'], comp = mesIsoDe(reg['Mês']);
+  const f = garantirFunc(nome);
+  const lanc = textoParaLanc(reg['Lançamentos'], comp);
+  const temLanc = Object.keys(lanc).length > 0;
+  const atual = lancNoPeriodo(f, periodo(comp));
+  const ordenado = o => JSON.stringify(Object.entries(o).sort());
+  if (temLanc && Object.keys(atual).length && ordenado(atual) !== ordenado(lanc)
+      && !confirm(`Já existem lançamentos na tela para ${nome} em ${reg['Mês']} diferentes do histórico. Substituir pelos do histórico?`)) return;
+  f.salario = numBr(reg['Salário']);
+  f.divisor = Number(reg['Divisor']) || 220;
+  if (temLanc) {
+    Object.keys(atual).forEach(k => delete f.lanc[k]);
+    Object.assign(f.lanc, lanc);
+  }
+  $('nome').value = nome;
+  $('mes').value = comp;
+  renderListaFunc();
+  carregarFuncionario();
+  const completo = temLanc || Object.keys(atual).length > 0;
+  status(completo
+    ? `Carregado: ${nome} — ${reg['Mês']}`
+    : `Carregado: ${nome} — ${reg['Mês']}. Registro antigo, sem os lançamentos dia a dia (só salário e totais).`,
+    completo ? 'ok' : 'falha');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function vincularArquivo(handle) {
+  await idb('put', handle);
+  status(`Arquivo vinculado: ${handle.name}`, 'ok');
+  await atualizarHistorico();
+}
+
+async function novoArquivoHistorico() {
+  if (!window.showSaveFilePicker) { status('Use o Microsoft Edge ou o Google Chrome para gravar o histórico em arquivo.', 'falha'); return; }
+  try {
+    const handle = await window.showSaveFilePicker({ suggestedName: 'historico.csv', types: [{ description: 'CSV', accept: { 'text/csv': ['.csv'] } }] });
+    const w = await handle.createWritable();
+    await w.write(gerarHistorico([]));
+    await w.close();
+    await vincularArquivo(handle);
+  } catch (e) { if (e.name !== 'AbortError') status('Erro: ' + e.message, 'falha'); }
+}
+
+async function abrirArquivoHistorico() {
+  if (!window.showOpenFilePicker) { status('Use o Microsoft Edge ou o Google Chrome para gravar o histórico em arquivo.', 'falha'); return; }
+  try {
+    const [handle] = await window.showOpenFilePicker({ types: [{ description: 'CSV', accept: { 'text/csv': ['.csv'] } }] });
+    await vincularArquivo(handle);
+  } catch (e) { if (e.name !== 'AbortError') status('Erro: ' + e.message, 'falha'); }
+}
+
+async function iniciarHistorico() {
+  historico = [];
+  desenharHistorico();
+  if (state.historico.modo === 'github') {
+    const c = state.historico;
+    if (!c.owner || !c.repo || !lerToken()) { status('Configure o GitHub em Configurações.'); return; }
+    status(`Repositório: ${c.owner}/${c.repo} · ${c.caminho}`);
+    if (await atualizarHistorico()) status(`Repositório: ${c.owner}/${c.repo} · ${c.caminho}`, 'ok');
+    return;
+  }
+  if (!window.showOpenFilePicker) { status('Gravação em arquivo disponível apenas no Edge ou Chrome.'); return; }
+  try {
+    const handle = await idb('get');
+    if (!handle) { status('Nenhum arquivo de histórico vinculado ainda.'); return; }
+    status(`Arquivo vinculado: ${handle.name}`, 'ok');
+    if (await handle.queryPermission({ mode: 'readwrite' }) === 'granted') await atualizarHistorico();
+    else $('tbHist').innerHTML = '<tr><td class="muted">O navegador vai pedir permissão para acessar o arquivo ao salvar.</td></tr>';
+  } catch { status('Nenhum arquivo de histórico vinculado ainda.'); }
+}
+
+function aplicarModoHistorico() {
+  const gh = state.historico.modo === 'github';
+  $('ghCampos').classList.toggle('oculto', !gh);
+  document.querySelectorAll('.modo-local').forEach(el => el.classList.toggle('oculto', gh));
+  document.querySelectorAll('.modo-github').forEach(el => el.classList.toggle('oculto', !gh));
+  $('histDescricao').innerHTML = gh
+    ? 'Cada salvamento faz um <b>commit</b> no arquivo do repositório configurado. Se o mesmo funcionário e competência for salvo de novo, o registro é substituído.'
+    : 'Os cálculos são gravados num arquivo <b>historico.csv</b> (abre no Excel). Na primeira vez, crie o arquivo ou abra um já existente. Se o mesmo funcionário e competência for salvo de novo, o registro é substituído.';
+}
+
+// ---------- Configurações ----------
+function preencherConfiguracoes() {
+  $('cfgInicio').value = state.opcoes.diaInicio;
+  $('cfgFim').value = state.opcoes.diaFim;
+  $('dsrUteis').value = state.opcoes.dsrUteis;
+  $('dsrDescanso').value = state.opcoes.dsrDescanso;
+  $('optCarnaval').checked = state.opcoes.carnaval;
+  $('optCorpus').checked = state.opcoes.corpus;
+  $('cfgModo').value = state.historico.modo;
+  $('ghOwner').value = state.historico.owner;
+  $('ghRepo').value = state.historico.repo;
+  $('ghBranch').value = state.historico.branch;
+  $('ghCaminho').value = state.historico.caminho;
+  $('ghToken').value = lerToken();
+  aplicarModoHistorico();
+}
+
+function alterarDiaFolha() {
+  const dia = id => Math.min(31, Math.max(1, Math.round(Number($(id).value)) || 1));
+  state.opcoes.diaInicio = dia('cfgInicio');
+  state.opcoes.diaFim = dia('cfgFim');
+  salvar();
+  renderDias();
+}
+
+function exportarBackup() {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }));
+  a.download = `calculoHE-backup-${chave(new Date())}.json`;
+  a.click();
+}
+
+async function importarBackup(e) {
+  const arq = e.target.files[0];
+  e.target.value = '';
+  if (!arq) return;
+  try {
+    const dados = JSON.parse(await arq.text());
+    if (!dados || typeof dados.funcionarios !== 'object') throw new Error('arquivo não é um backup desta página');
+    if (!confirm('Substituir todos os dados deste navegador pelos do backup?')) return;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(dados));
+    location.reload();
+  } catch (err) { alert('Não foi possível importar: ' + err.message); }
+}
+
+// ---------- Eventos ----------
+$('nome').addEventListener('change', carregarFuncionario);
+$('mes').addEventListener('change', renderDias);
+['salario', 'divisor'].forEach(id => $(id).addEventListener('input', () => {
+  const f = funcAtual();
+  if (f) { f.salario = Number($('salario').value) || 0; f.divisor = Number($('divisor').value) || 220; salvar(); renderListaFunc(); }
+  calcular();
+}));
+['cfgInicio', 'cfgFim'].forEach(id => $(id).addEventListener('change', alterarDiaFolha));
+['dsrUteis', 'dsrDescanso'].forEach(id => $(id).addEventListener('input', () => {
+  state.opcoes[id] = Number($(id).value) || 0;
+  salvar();
+  calcular();
+}));
+$('cfgModo').addEventListener('change', () => {
+  state.historico.modo = $('cfgModo').value;
+  salvar();
+  aplicarModoHistorico();
+  iniciarHistorico();
+});
+[['ghOwner', 'owner'], ['ghRepo', 'repo'], ['ghBranch', 'branch'], ['ghCaminho', 'caminho']].forEach(([id, campo]) =>
+  $(id).addEventListener('change', () => { state.historico[campo] = $(id).value.trim(); ghSha = null; salvar(); }));
+$('ghToken').addEventListener('change', () => {
+  try { localStorage.setItem(TOKEN_KEY, $('ghToken').value.trim()); } catch {}
+});
+$('btnTestarGh').addEventListener('click', iniciarHistorico);
+$('btnBackup').addEventListener('click', exportarBackup);
+$('btnRestaurar').addEventListener('click', () => $('arqBackup').click());
+$('arqBackup').addEventListener('change', importarBackup);
+$('tbDias').addEventListener('input', salvarLancamento);
+$('btnExcluir').addEventListener('click', () => {
+  const nome = $('nome').value.trim();
+  if (!state.funcionarios[nome] || !confirm(`Excluir "${nome}" e todos os lançamentos?`)) return;
+  delete state.funcionarios[nome];
+  salvar(); renderListaFunc();
+  $('nome').value = ''; carregarFuncionario();
+});
+$('btnLimpar').addEventListener('click', () => {
+  const f = state.funcionarios[$('nome').value.trim()];
+  if (!confirm('Apagar todos os lançamentos desta competência?')) return;
+  if (f) { Object.keys(lancNoPeriodo(f, periodo($('mes').value))).forEach(k => delete f.lanc[k]); salvar(); }
+  renderDias();
+});
+$('btnExcel').addEventListener('click', exportarExcel);
+$('btnSalvarHist').addEventListener('click', salvarHistorico);
+$('btnNovoHist').addEventListener('click', novoArquivoHistorico);
+$('btnAbrirHist').addEventListener('click', abrirArquivoHistorico);
+$('btnAtualizarHist').addEventListener('click', atualizarHistorico);
+$('histFiltro').addEventListener('input', desenharHistorico);
+$('tbHist').addEventListener('click', e => {
+  const tr = e.target.closest('tr[data-i]');
+  if (tr) carregarDoHistorico(historico[Number(tr.dataset.i)]);
+});
+$('optCarnaval').addEventListener('change', e => { state.opcoes.carnaval = e.target.checked; salvar(); renderDias(); });
+$('optCorpus').addEventListener('change', e => { state.opcoes.corpus = e.target.checked; salvar(); renderDias(); });
+$('btnAddFeriado').addEventListener('click', () => {
+  const data = $('fData').value, nome = $('fNome').value.trim();
+  if (!data || !nome) { alert('Informe data e nome do feriado.'); return; }
+  state.feriados.push({ data, nome, anual: $('fAnual').checked });
+  salvar(); renderFeriados(); renderDias();
+  $('fData').value = ''; $('fNome').value = '';
+});
+$('tbFeriados').addEventListener('click', e => {
+  const i = e.target.dataset.rm;
+  if (i === undefined) return;
+  state.feriados.splice(Number(i), 1);
+  salvar(); renderFeriados(); renderDias();
+});
+
+// ---------- Início ----------
+salvar(); // grava a migração de formato, se houve
+preencherConfiguracoes();
+$('mes').value = competenciaAtual();
+$('nome').value = state.ultimo || '';
+renderListaFunc();
+renderFeriados();
+carregarFuncionario();
+iniciarHistorico();
+</script>
+</body>
+</html>
