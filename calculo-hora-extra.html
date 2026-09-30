@@ -4,16 +4,22 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cálculo de Horas Extras</title>
+<link rel="icon" type="image/png" href="img/favicon.png">
+<link rel="preload" as="image" href="img/logo.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root {
-    --bg: #f4f6f9; --card: #fff; --text: #1f2933; --muted: #6b7785; --border: #dde3ea;
-    --accent: #1f5fae; --weekend: #fff4e0; --holiday: #fde8e8; --ok: #1e7b45;
+    /* Cores do logo Boqcer: teal #117a7d e petróleo #0b4b55 */
+    --bg: #f2f6f6; --card: #fff; --text: #1d2e33; --muted: #647a7f; --border: #d8e3e4;
+    --accent: #117a7d; --accent-dark: #0b4b55; --accent-soft: #e3f1f1;
+    --weekend: #fff4e0; --holiday: #fde8e8; --ok: #117a7d;
   }
   * { box-sizing: border-box; }
   body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
-  header { background: var(--accent); color: #fff; padding: 14px 24px; }
-  header h1 { margin: 0; font-size: 20px; }
+  header { background: linear-gradient(90deg, var(--accent-dark), var(--accent)); color: #fff; padding: 12px 24px; display: flex; align-items: center; gap: 14px; }
+  header img { height: 46px; width: 46px; }
+  header h1 { margin: 0; font-size: 20px; line-height: 1.2; }
+  header .empresa { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; opacity: .85; }
   main { max-width: 1250px; margin: 0 auto; padding: 16px; display: grid; grid-template-columns: 1fr 400px; gap: 16px; }
   @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
   .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
@@ -27,7 +33,10 @@
   input, select, button { font: inherit; padding: 6px 8px; border: 1px solid var(--border); border-radius: 5px; }
   input:focus { outline: 2px solid var(--accent); border-color: transparent; }
   button { background: var(--accent); color: #fff; border: none; cursor: pointer; }
-  button.sec { background: #e6ebf1; color: var(--text); }
+  button:hover { background: var(--accent-dark); }
+  button.sec { background: var(--accent-soft); color: var(--accent-dark); }
+  button.sec:hover { background: #cfe6e6; }
+  button.danger:hover { background: #a93226; }
   button.danger { background: #c0392b; }
   table { width: 100%; border-collapse: collapse; }
   th, td { padding: 5px 8px; border-bottom: 1px solid var(--border); text-align: left; }
@@ -36,7 +45,7 @@
   tr.fim { background: var(--weekend); }
   tr.feriado { background: var(--holiday); }
   .dias input { width: 80px; text-align: right; }
-  .tag { font-size: 11px; padding: 2px 6px; border-radius: 10px; background: #e6ebf1; white-space: nowrap; }
+  .tag { font-size: 11px; padding: 2px 6px; border-radius: 10px; background: var(--accent-soft); white-space: nowrap; }
   tr.fim .tag { background: #f6d9a6; }
   tr.feriado .tag { background: #f5b5b5; }
   #tbResumo tfoot td { font-weight: 600; }
@@ -47,17 +56,45 @@
   #histStatus.ok { color: var(--ok); }
   #histStatus.falha { color: #c0392b; }
   #tbHist tr[data-i] { cursor: pointer; }
-  #tbHist tr[data-i]:hover { background: #eaf1fb; }
+  #tbHist tr[data-i]:hover { background: var(--accent-soft); }
   .oculto { display: none !important; }
+
+  /* Folha de impressão (para assinatura): só aparece ao imprimir */
+  #impressao { display: none; }
+  @page { size: A4; margin: 14mm; }
   @media print {
-    header, .no-print { display: none !important; }
-    main { grid-template-columns: 1fr; }
-    .card { border: none; }
+    header, main { display: none !important; }
+    body { background: #fff; font-size: 12px; }
+    #impressao { display: block; color: #000; }
+    #impressao .topo { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #0b4b55; padding-bottom: 8px; margin-bottom: 12px; }
+    #impressao .topo img { height: 80px; }
+    #impressao .topo h1 { margin: 0; font-size: 18px; color: #0b4b55; text-align: right; }
+    #impressao .dados { display: grid; grid-template-columns: 110px 1fr; gap: 3px 10px; margin-bottom: 14px; }
+    #impressao .dados b { color: #333; }
+    #impressao h2 { font-size: 13px; margin: 16px 0 6px; color: #0b4b55; }
+    #impressao table { width: 100%; border-collapse: collapse; }
+    #impressao th, #impressao td { border: 1px solid #999; padding: 3px 6px; }
+    #impressao th { background: #e3f1f1; color: #000; font-size: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    #impressao tr { page-break-inside: avoid; }
+    #impressao tr.destaque td { font-weight: 700; }
+    #impressao tr.geral td { font-weight: 700; font-size: 13px; background: #e3f1f1; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    #impressao .resumo { width: 60%; }
+    #impressao .declaracao { margin-top: 18px; }
+    #impressao .assinaturas { display: flex; gap: 40px; margin-top: 50px; page-break-inside: avoid; }
+    #impressao .assinaturas div { flex: 1; text-align: center; border-top: 1px solid #000; padding-top: 4px; }
+    #impressao .rodape { margin-top: 24px; font-size: 10px; color: #666; }
   }
 </style>
 </head>
 <body>
-<header><h1>Cálculo de Horas Extras</h1></header>
+<header>
+  <img src="img/logo-b-branco.png" alt="">
+  <div>
+    <h1>Cálculo de Horas Extras</h1>
+    <div class="empresa">Boqcer Boquilhas</div>
+  </div>
+</header>
+<div id="impressao"></div>
 
 <main>
   <section>
@@ -166,7 +203,7 @@
         </tfoot>
       </table>
       <div class="row no-print" style="margin-top:12px">
-        <button onclick="window.print()">Imprimir</button>
+        <button id="btnImprimir">Imprimir</button>
         <button class="sec" id="btnExcel">Exportar Excel</button>
         <button class="sec" id="btnLimpar">Limpar competência</button>
       </div>
@@ -491,6 +528,57 @@ function renderFeriados() {
         <td class="muted">${f.anual ? 'anual' : ''}</td>
         <td><button class="sec" data-rm="${f.i}">✕</button></td></tr>`;
     }).join('') : '<tr><td class="muted">Nenhum feriado regional cadastrado.</td></tr>';
+}
+
+// ---------- Impressão (folha para assinatura) ----------
+// Mesmo conteúdo da planilha exportada, sem salário, divisor e valor da hora (base de cálculo)
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function montarImpressao() {
+  calcular();
+  const r = resumo;
+  const linhasResumo = r.linhas.map(l =>
+    `<tr><td>${l.pct}%</td><td class="num">${num(l.horas)}</td><td class="num">${brl(l.total)}</td></tr>`).join('');
+  const linhasDias = r.dias.length ? r.dias.map(d =>
+    `<tr><td>${d.data}</td><td>${esc(d.dia)}</td><td>${esc(d.tipo)}</td><td class="num">${num(d.horas)}</td><td class="num">${brl(d.valor)}</td></tr>`).join('')
+    : '<tr><td colspan="5">Nenhuma hora lançada.</td></tr>';
+
+  $('impressao').innerHTML = `
+    <div class="topo">
+      <img src="img/logo.png" alt="Boqcer Boquilhas">
+      <h1>Demonstrativo de<br>Horas Extras</h1>
+    </div>
+    <div class="dados">
+      <b>Funcionário:</b><span>${esc(r.nome) || '—'}</span>
+      <b>Competência:</b><span>${nomeMes(r.mes)}</span>
+      <b>Período:</b><span>${r.periodo}</span>
+    </div>
+
+    <h2>Resumo</h2>
+    <table class="resumo">
+      <thead><tr><th>Percentual</th><th class="num">Horas</th><th class="num">Total</th></tr></thead>
+      <tbody>
+        ${linhasResumo}
+        <tr class="destaque"><td>TOTAL</td><td class="num">${num(r.totalHoras)}</td><td class="num">${brl(r.total)}</td></tr>
+        <tr class="destaque"><td>DSR</td><td></td><td class="num">${brl(r.dsr)}</td></tr>
+        <tr class="geral"><td>TOTAL GERAL</td><td></td><td class="num">${brl(r.geral)}</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Lançamentos por dia</h2>
+    <table>
+      <thead><tr><th>Data</th><th>Dia</th><th>Tipo</th><th class="num">Horas</th><th class="num">Valor</th></tr></thead>
+      <tbody>${linhasDias}</tbody>
+    </table>
+
+    <p class="declaracao">Declaro que as horas extras acima conferem com as efetivamente realizadas no período.</p>
+    <p>Data: ____/____/________</p>
+
+    <div class="assinaturas">
+      <div>${esc(r.nome) || 'Funcionário'}<br><small>Funcionário</small></div>
+      <div>&nbsp;<br><small>Encarregado</small></div>
+    </div>
+    <div class="rodape">Emitido em ${new Date().toLocaleString('pt-BR')}</div>`;
 }
 
 // ---------- Exportação Excel ----------
@@ -1007,6 +1095,14 @@ $('btnLimpar').addEventListener('click', () => {
   renderDias();
 });
 $('btnExcel').addEventListener('click', exportarExcel);
+// Monta a folha também quando a impressão vem do Ctrl+P
+window.addEventListener('beforeprint', montarImpressao);
+$('btnImprimir').addEventListener('click', async () => {
+  montarImpressao();
+  const logo = $('impressao').querySelector('img');
+  try { await logo.decode(); } catch {} // garante o logo carregado antes de abrir a impressão
+  window.print();
+});
 $('btnSalvarHist').addEventListener('click', salvarHistorico);
 $('btnNovoHist').addEventListener('click', novoArquivoHistorico);
 $('btnAbrirHist').addEventListener('click', abrirArquivoHistorico);
