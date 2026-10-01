@@ -2,510 +2,927 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#44553f">
     <title>Calculadora de Cortes - Meliponário</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐝</text></svg>">
     <style>
         :root {
-            --bg-color: #f4f1ea;
+            --bg: #f5f1e8;
+            --surface: #ffffff;
+            --surface-2: #faf7f0;
+            --text: #2c2925;
+            --muted: #6e665b;
+            --border: #e3d8c7;
             --primary: #4a5c44;
-            --secondary: #899c82;
-            --text-dark: #2c2925;
-            --card-bg: #ffffff;
-            --border: #d4c5b6;
+            --primary-btn: #4a5c44;
+            --primary-hover: #3a4935;
+            --on-primary: #ffffff;
+            --honey: #d99a1e;
+            --honey-soft: #fbefd2;
+            --honey-ink: #8a5a00;
+            --ring: rgba(74, 92, 68, 0.25);
+            --danger: #b3261e;
+            --wood: #d9ad74;
+            --wood-2: #a8713a;
+            --eps: #eef2f5;
+            --piece-stroke: #6b4a2b;
+            --inner: #fdf6e3;
+            --chip-bg: #eaf0e6;
+            --chip-text: #2f3d2b;
+            --switch-off: #cfc6b8;
+            --input-bg: #ffffff;
+            --hero-bg: #44553f;
+            --hero-text: #fffaf0;
+            --shadow: 0 1px 2px rgba(60, 45, 20, 0.04), 0 4px 14px rgba(60, 45, 20, 0.06);
         }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #181714;
+                --surface: #23211d;
+                --surface-2: #2a2823;
+                --text: #eee8dd;
+                --muted: #a9a194;
+                --border: #3b372f;
+                --primary: #a7c09c;
+                --primary-btn: #8fae84;
+                --primary-hover: #a2c096;
+                --on-primary: #15200f;
+                --honey: #f0b740;
+                --honey-soft: #3a2f17;
+                --honey-ink: #f3c766;
+                --ring: rgba(167, 192, 156, 0.3);
+                --danger: #f2867d;
+                --wood: #b88a52;
+                --wood-2: #8a5a2e;
+                --eps: #d9dee3;
+                --piece-stroke: #2b1d10;
+                --inner: #2f2a1f;
+                --chip-bg: #2f3a2b;
+                --chip-text: #d6e6cc;
+                --switch-off: #4a453c;
+                --input-bg: #1d1b18;
+                --hero-bg: #2f3b2b;
+                --hero-text: #fff3dc;
+                --shadow: none;
+            }
+        }
+
+        * { box-sizing: border-box; }
+        [hidden] { display: none !important; }
 
         body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-dark);
+            font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
             margin: 0;
-            padding: 20px;
-            line-height: 1.6;
+            padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
+            line-height: 1.5;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
+        .container { max-width: 760px; margin: 0 auto; }
 
-        header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        h1 {
-            color: var(--primary);
-            margin-bottom: 5px;
-        }
-
-        .card {
-            background: var(--card-bg);
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            margin-bottom: 20px;
-            border: 1px solid var(--border);
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 5px;
-            color: var(--primary);
-        }
-
-        input[type="number"], select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            box-sizing: border-box;
-            font-size: 16px;
-        }
-        
-        input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            margin-right: 8px;
-            cursor: pointer;
-        }
-
-        .grid-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-
-        .grid-3 {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 15px;
-        }
-
-        button {
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            width: 100%;
-            font-weight: bold;
-            transition: background 0.3s;
-        }
-
-        button:hover {
-            background-color: #384633;
-        }
-
-        #resultado {
-            display: none;
-        }
-
-        .result-box {
-            background-color: #eaf0e6;
-            border-left: 5px solid var(--secondary);
-            padding: 15px;
-            margin-top: 15px;
-            border-radius: 4px;
-        }
-
-        .result-item {
+        /* ---------- Cabeçalho ---------- */
+        .hero {
             display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px dashed var(--secondary);
             align-items: center;
+            gap: 16px;
+            padding: 18px 20px;
+            margin-bottom: 16px;
+            border-radius: 18px;
+            color: var(--hero-text);
+            background-color: var(--hero-bg);
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.15V49h-2z' fill='%23ffffff' fill-opacity='0.07' fill-rule='evenodd'/%3E%3C/svg%3E");
         }
-        
-        .result-item:last-child {
-            border-bottom: none;
+        .hero svg { width: 96px; height: 80px; flex: none; }
+        .hero h1 { margin: 0; font-size: 1.55rem; line-height: 1.2; }
+        .hero p { margin: 4px 0 0; opacity: 0.85; font-size: 0.95rem; }
+
+        /* ---------- Cards ---------- */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 14px;
+            box-shadow: var(--shadow);
         }
-        
-        .result-value {
-            text-align: right;
-            line-height: 1.4;
+        .card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+        .card-head h2 { margin: 0; font-size: 1.08rem; }
+        .ico {
+            width: 34px; height: 34px; flex: none;
+            display: grid; place-items: center;
+            border-radius: 10px;
+            background: var(--honey-soft);
+            color: var(--honey-ink);
+        }
+        .ico svg { width: 20px; height: 20px; }
+        .hint { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
+
+        /* ---------- Opções em cartão (radio) ---------- */
+        .opt-label { font-weight: 600; font-size: 14px; margin: 0 0 8px; }
+        .opt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+        .opt-grid:last-child { margin-bottom: 0; }
+        .opt { position: relative; display: block; cursor: pointer; }
+        .opt input { position: absolute; opacity: 0; pointer-events: none; }
+        .opt-body {
+            display: flex; align-items: center; gap: 10px;
+            height: 100%; min-height: 64px;
+            padding: 10px 12px;
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            background: var(--surface);
+            transition: border-color .15s, background .15s;
+        }
+        .opt-body svg { width: 38px; height: 38px; flex: none; }
+        .opt-title { display: block; font-weight: 600; line-height: 1.2; }
+        .opt-sub { display: block; font-size: 12.5px; color: var(--muted); line-height: 1.25; margin-top: 2px; }
+        .opt input:checked + .opt-body {
+            border-color: var(--primary);
+            background: var(--chip-bg);
+            box-shadow: inset 0 0 0 1px var(--primary);
+        }
+        .opt input:focus-visible + .opt-body { outline: 3px solid var(--ring); outline-offset: 2px; }
+
+        /* Cores das peças (usadas nos ícones, no diagrama e na lista) */
+        .f-wood { fill: var(--wood); }
+        .f-wood2 { fill: var(--wood-2); }
+        .f-eps { fill: var(--eps); }
+        .f-in { fill: var(--surface); }
+        .s-piece { stroke: var(--piece-stroke); stroke-width: 1; }
+
+        /* ---------- Campos ---------- */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; align-items: end; }
+        .field label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px; line-height: 1.25; }
+        .input-wrap { position: relative; }
+        .input-wrap input {
+            width: 100%;
+            padding: 12px 36px 12px 12px;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            font-size: 16px;
+            font-family: inherit;
+            background: var(--input-bg);
+            color: var(--text);
+        }
+        .input-wrap input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--ring); }
+        .unit {
+            position: absolute; right: 11px; top: 50%; transform: translateY(-50%);
+            color: var(--muted); font-size: 14px; pointer-events: none;
+        }
+        .field.invalid input { border-color: var(--danger); }
+        .field.invalid label { color: var(--danger); }
+
+        /* ---------- Opcionais (switch) ---------- */
+        .option-box {
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 14px;
+            background: var(--surface-2);
+        }
+        .option-box + .option-box { margin-top: 10px; }
+        .option-box .field { margin-top: 12px; }
+        .toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; }
+        .toggle-row strong { display: block; line-height: 1.25; }
+        .toggle-row small { display: block; color: var(--muted); font-size: 12.5px; line-height: 1.3; }
+        .switch {
+            appearance: none; -webkit-appearance: none;
+            width: 46px; height: 28px; margin: 0; flex: none;
+            border-radius: 999px;
+            background: var(--switch-off);
+            position: relative; cursor: pointer;
+            transition: background .2s;
+        }
+        .switch::after {
+            content: ''; position: absolute; top: 3px; left: 3px;
+            width: 22px; height: 22px; border-radius: 50%;
+            background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25);
+            transition: transform .2s;
+        }
+        .switch:checked { background: var(--primary-btn); }
+        .switch:checked::after { transform: translateX(18px); }
+        .switch:focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
+
+        /* ---------- Botões ---------- */
+        .btn {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            width: 100%; min-height: 50px;
+            padding: 12px 18px;
+            border: none; border-radius: 12px;
+            background: var(--primary-btn); color: var(--on-primary);
+            font: inherit; font-size: 16px; font-weight: 700;
+            cursor: pointer;
+            transition: background .2s, transform .05s;
+        }
+        .btn:hover { background: var(--primary-hover); }
+        .btn:active { transform: scale(0.99); }
+        .btn svg { width: 20px; height: 20px; }
+        .btn-secondary { background: var(--surface-2); color: var(--text); border: 1.5px solid var(--border); }
+        .btn-secondary:hover { background: var(--chip-bg); }
+        .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+
+        /* ---------- Resultado ---------- */
+        .placeholder { text-align: center; color: var(--muted); padding: 28px 20px; }
+        .placeholder svg { width: 64px; height: 64px; margin-bottom: 6px; }
+        .placeholder p { margin: 0; }
+
+        .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+        .tag {
+            font-size: 12.5px; padding: 3px 10px;
+            border-radius: 999px;
+            background: var(--surface-2); border: 1px solid var(--border);
+        }
+        .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+        .stat { border-radius: 12px; padding: 10px 14px; background: var(--surface-2); border: 1px solid var(--border); }
+        .stat.destaque { background: var(--honey-soft); border-color: transparent; }
+        .stat span { display: block; font-size: 12.5px; color: var(--muted); }
+        .stat strong { display: block; font-size: 1.3rem; font-variant-numeric: tabular-nums; line-height: 1.3; }
+        .stat.destaque span { color: var(--honey-ink); }
+
+        .diagram {
+            margin: 0 0 6px;
+            padding: 12px;
+            border-radius: 12px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+        }
+        .diagram svg { display: block; width: 100%; height: auto; max-height: 300px; }
+        .diagram figcaption { font-size: 12.5px; color: var(--muted); text-align: center; margin-top: 6px; }
+        .dg-inner { fill: var(--inner); }
+        .dg-text { fill: var(--muted); font-family: inherit; }
+        .dg-strong { fill: var(--text); font-weight: 700; }
+        .dg-line { stroke: var(--muted); stroke-width: 1; }
+        .dg-piece { font-family: inherit; font-weight: 700; fill: #3a2a12; }
+        .dg-piece-extra { fill: #fff3dc; }
+        .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center; font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+        .legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+        .sw { width: 14px; height: 14px; border-radius: 4px; flex: none; border: 1px solid var(--piece-stroke); display: inline-block; }
+        .sw-wood { background: var(--wood); }
+        .sw-eps { background: var(--eps); }
+        .sw-extra { background: var(--wood-2); }
+
+        .group { margin-top: 18px; break-inside: avoid; }
+        .group-title { display: flex; align-items: center; gap: 8px; font-weight: 700; margin-bottom: 4px; }
+        .group-title .ico { width: 28px; height: 28px; border-radius: 8px; }
+        .group-title .ico svg { width: 16px; height: 16px; }
+        .group-note { font-size: 13px; color: var(--muted); margin: 0 0 4px; }
+        .row {
+            display: flex; align-items: center; justify-content: space-between; gap: 12px;
+            padding: 10px 0;
+            border-top: 1px dashed var(--border);
+        }
+        .row:first-of-type { border-top: none; }
+        .row-name { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+        .chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+        .chip {
+            background: var(--chip-bg); color: var(--chip-text);
+            border-radius: 8px; padding: 4px 10px;
+            font-weight: 600; font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+        .chip b { opacity: .7; font-weight: 700; }
+
+        /* ---------- Aviso flutuante ---------- */
+        .toast {
+            position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom));
+            transform: translate(-50%, 20px);
+            background: var(--text); color: var(--bg);
+            padding: 10px 18px; border-radius: 999px;
+            font-size: 14px; font-weight: 600;
+            opacity: 0; pointer-events: none;
+            transition: opacity .2s, transform .2s;
+            max-width: calc(100% - 32px); text-align: center;
+        }
+        .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+        footer { text-align: center; font-size: 12.5px; color: var(--muted); margin-top: 18px; }
+
+        /* ---------- Mobile ---------- */
+        @media (max-width: 560px) {
+            body { padding-left: 12px; padding-right: 12px; }
+            .hero { padding: 14px 16px; gap: 12px; }
+            .hero svg { width: 70px; height: 58px; }
+            .hero h1 { font-size: 1.25rem; }
+            .hero p { font-size: 0.85rem; }
+            .card { padding: 16px; border-radius: 14px; }
+            .opt-body { flex-direction: column; align-items: flex-start; gap: 6px; }
+            .opt-body svg { width: 32px; height: 32px; }
+            .row { flex-direction: column; align-items: flex-start; gap: 6px; }
+            .chips { justify-content: flex-start; }
+            .stat strong { font-size: 1.1rem; }
         }
 
-        .status-msg {
-            text-align: center;
-            font-size: 14px;
-            color: #666;
-            margin-top: 10px;
-            font-style: italic;
-        }
-
-        .lixeira-box {
-            background-color: #f0f4f8;
-            border-left: 5px solid #6b8aab;
+        /* ---------- Impressão ---------- */
+        @media print {
+            :root { --bg: #fff; --surface: #fff; --surface-2: #fff; --text: #000; --muted: #444; --shadow: none; }
+            body { padding: 0; }
+            .no-print, .toast, footer { display: none !important; }
+            .hero { background: none; color: #000; padding: 0 0 8px; border-bottom: 2px solid #000; border-radius: 0; }
+            .card { border: none; padding: 0; }
+            .chip { border: 1px solid #999; background: #fff; color: #000; }
+            .diagram svg { max-height: 220px; }
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <header>
-        <h1>Calculadora de Cortes - Meliponário</h1>
+    <header class="hero">
+        <!-- Caixa INPA (tampa, melgueira, sobreninho, ninho) com uma abelhinha saindo -->
+        <svg viewBox="0 0 120 100" aria-hidden="true">
+            <rect x="14" y="12" width="72" height="10" rx="2" fill="#8a5a2e"/>
+            <rect x="20" y="22" width="60" height="18" fill="#d9ad74" stroke="#6b4a2b" stroke-width="1.2"/>
+            <rect x="20" y="40" width="60" height="18" fill="#cf9f63" stroke="#6b4a2b" stroke-width="1.2"/>
+            <rect x="20" y="58" width="60" height="24" fill="#d9ad74" stroke="#6b4a2b" stroke-width="1.2"/>
+            <rect x="17" y="82" width="66" height="5" rx="1" fill="#8a5a2e"/>
+            <circle cx="50" cy="72" r="3.2" fill="#3a2a12"/>
+            <path d="M54 70 C 66 62, 74 76, 88 60" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 3" opacity=".6"/>
+            <g transform="translate(98 54) rotate(-15)">
+                <ellipse cx="-2" cy="-7" rx="4.5" ry="7" fill="#fff" opacity=".85" transform="rotate(-20 -2 -7)"/>
+                <ellipse cx="3" cy="-7" rx="4" ry="6.5" fill="#fff" opacity=".7" transform="rotate(20 3 -7)"/>
+                <ellipse cx="0" cy="0" rx="8" ry="5.5" fill="#f2b632"/>
+                <path d="M-2 -5.1v10.2M2.5 -4.8v9.6" stroke="#3a2a12" stroke-width="2"/>
+                <circle cx="9" cy="0" r="3.6" fill="#3a2a12"/>
+            </g>
+        </svg>
+        <div>
+            <h1>Calculadora de Cortes</h1>
+            <p>Caixas para abelhas sem ferrão · Meliponário</p>
+        </div>
     </header>
 
-    <div class="card">
-        <form id="calcForm">
-            <div class="grid-2">
-                <div class="form-group">
-                    <label>Tipo de Caixa</label>
-                    <select id="tipoCaixa">
-                        <option value="simples">Caixa Simples (Maciça)</option>
-                        <option value="sanduiche">Caixa Sanduíche (Térmica c/ Isopor)</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Tipo de Encaixe das Peças</label>
-                    <select id="tipoEncaixe">
-                        <option value="catavento">Cata-Vento (Circular)</option>
-                        <option value="topotopo">Topo a Topo (Peça maior abraça a menor)</option>
-                    </select>
-                </div>
+    <form id="calcForm" novalidate>
+        <!-- 1. Tipo de caixa -->
+        <section class="card no-print">
+            <div class="card-head">
+                <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 5h18v3H3zM4.5 8h15v5h-15zM4.5 13h15v7h-15z"/><circle cx="12" cy="17" r="1"/></svg></span>
+                <h2>Tipo de caixa</h2>
             </div>
 
-            <div class="grid-2">
-                <div class="form-group">
-                    <label>Largura Interna Livre (cm)</label>
-                    <input type="number" id="larguraInterna" step="0.1" required placeholder="Ex: 12">
-                </div>
-                <div class="form-group">
-                    <label>Comprimento Interno Livre (cm)</label>
-                    <input type="number" id="comprimentoInterno" step="0.1" required placeholder="Ex: 12">
-                </div>
-            </div>
-            
-            <div class="grid-2">
-                <div class="form-group">
-                    <label>Espessura Madeira Principal (cm)</label>
-                    <input type="number" id="espessuraMadeira" step="0.1" required placeholder="Ex: 2">
-                </div>
-                <div class="form-group" id="grupoIsopor" style="display:none;">
-                    <label>Espessura do Isopor/EPS (cm)</label>
-                    <input type="number" id="espessuraIsopor" step="0.1" placeholder="Ex: 1">
-                </div>
-            </div>
-
-            <div class="form-group" style="background: #fdfbf7; padding: 15px; border: 1px solid var(--border); border-radius: 6px;">
-                <label style="display: flex; align-items: center; margin-bottom: 0;">
-                    <input type="checkbox" id="temCamadaExtra">
-                    Adicionar camada EXTRA externa de madeira
+            <p class="opt-label">Parede</p>
+            <div class="opt-grid">
+                <label class="opt">
+                    <input type="radio" name="tipoCaixa" value="simples" checked>
+                    <span class="opt-body">
+                        <svg viewBox="0 0 40 40" aria-hidden="true"><rect x="6" y="6" width="28" height="28" class="f-wood s-piece"/><rect x="11" y="11" width="18" height="18" class="f-in s-piece"/></svg>
+                        <span><span class="opt-title">Simples</span><span class="opt-sub">Madeira maciça</span></span>
+                    </span>
                 </label>
-                <div class="form-group" id="grupoExtra" style="display:none; margin-top: 15px; margin-bottom: 0;">
-                    <label>Espessura da Madeira Extra (cm)</label>
-                    <input type="number" id="espessuraExtra" step="0.1" placeholder="Ex: 2">
-                </div>
-            </div>
-
-            <div class="form-group" style="background: #f0f4f8; padding: 15px; border: 1px solid #d0deeb; border-radius: 6px;">
-                <label style="display: flex; align-items: center; margin-bottom: 0;">
-                    <input type="checkbox" id="temLixeira">
-                    Adicionar Módulo de Lixeira
+                <label class="opt">
+                    <input type="radio" name="tipoCaixa" value="sanduiche">
+                    <span class="opt-body">
+                        <svg viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="3" width="34" height="34" class="f-wood s-piece"/><rect x="7" y="7" width="26" height="26" class="f-eps s-piece"/><rect x="11" y="11" width="18" height="18" class="f-wood s-piece"/><rect x="15" y="15" width="10" height="10" class="f-in s-piece"/></svg>
+                        <span><span class="opt-title">Sanduíche</span><span class="opt-sub">Térmica c/ isopor</span></span>
+                    </span>
                 </label>
-                <div class="form-group" id="grupoLixeira" style="display:none; margin-top: 15px; margin-bottom: 0;">
-                    <label>Altura do Módulo Lixeira (cm)</label>
-                    <input type="number" id="alturaLixeira" step="0.1" placeholder="Ex: 5">
+            </div>
+
+            <p class="opt-label">Encaixe das peças</p>
+            <div class="opt-grid">
+                <label class="opt">
+                    <input type="radio" name="tipoEncaixe" value="catavento" checked>
+                    <span class="opt-body">
+                        <svg viewBox="0 0 40 40" aria-hidden="true"><g class="f-wood s-piece"><rect x="10" y="5" width="25" height="5"/><rect x="30" y="10" width="5" height="25"/><rect x="5" y="30" width="25" height="5"/><rect x="5" y="5" width="5" height="25"/></g></svg>
+                        <span><span class="opt-title">Cata-vento</span><span class="opt-sub">Circular</span></span>
+                    </span>
+                </label>
+                <label class="opt">
+                    <input type="radio" name="tipoEncaixe" value="topotopo">
+                    <span class="opt-body">
+                        <svg viewBox="0 0 40 40" aria-hidden="true"><g class="f-wood s-piece"><rect x="5" y="5" width="30" height="5"/><rect x="5" y="30" width="30" height="5"/><rect x="5" y="10" width="5" height="20"/><rect x="30" y="10" width="5" height="20"/></g></svg>
+                        <span><span class="opt-title">Topo a topo</span><span class="opt-sub">Peça maior abraça a menor</span></span>
+                    </span>
+                </label>
+            </div>
+        </section>
+
+        <!-- 2. Medidas -->
+        <section class="card no-print">
+            <div class="card-head">
+                <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M3 17 17 3l4 4L7 21z"/><path d="m7.5 12.5 2 2M10.5 9.5l2 2M13.5 6.5l2 2"/></svg></span>
+                <h2>Medidas</h2>
+            </div>
+            <div class="grid-2">
+                <div class="field">
+                    <label for="larguraInterna">Largura interna</label>
+                    <div class="input-wrap"><input type="text" inputmode="decimal" id="larguraInterna" placeholder="Ex: 12" autocomplete="off"><span class="unit">cm</span></div>
+                </div>
+                <div class="field">
+                    <label for="comprimentoInterno">Comprimento interno</label>
+                    <div class="input-wrap"><input type="text" inputmode="decimal" id="comprimentoInterno" placeholder="Ex: 12" autocomplete="off"><span class="unit">cm</span></div>
+                </div>
+            </div>
+            <div class="grid-2" style="margin-top: 12px;">
+                <div class="field">
+                    <label for="espessuraMadeira">Espessura da madeira</label>
+                    <div class="input-wrap"><input type="text" inputmode="decimal" id="espessuraMadeira" placeholder="Ex: 2" autocomplete="off"><span class="unit">cm</span></div>
+                </div>
+                <div class="field" id="grupoIsopor" hidden>
+                    <label for="espessuraIsopor">Espessura do isopor</label>
+                    <div class="input-wrap"><input type="text" inputmode="decimal" id="espessuraIsopor" placeholder="Ex: 1" autocomplete="off"><span class="unit">cm</span></div>
+                </div>
+            </div>
+            <p class="hint">Medidas internas livres (o espaço onde as abelhas ficam). Pode usar vírgula: 12,5.</p>
+        </section>
+
+        <!-- 3. Opcionais -->
+        <section class="card no-print">
+            <div class="card-head">
+                <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3 2 8l10 5 10-5z"/><path d="m2 13 10 5 10-5"/></svg></span>
+                <h2>Opcionais</h2>
+            </div>
+
+            <div class="option-box">
+                <label class="toggle-row">
+                    <span><strong>Camada extra externa</strong><small>Revestimento de madeira por fora</small></span>
+                    <input type="checkbox" class="switch" id="temCamadaExtra">
+                </label>
+                <div class="field" id="grupoExtra" hidden>
+                    <label for="espessuraExtra">Espessura da madeira extra</label>
+                    <div class="input-wrap"><input type="text" inputmode="decimal" id="espessuraExtra" placeholder="Ex: 2" autocomplete="off"><span class="unit">cm</span></div>
                 </div>
             </div>
 
-            <div class="grid-2" style="margin-top: 15px;">
-                <div class="form-group">
-                    <label>Modelo da Tampa</label>
-                    <select id="modeloTampa">
-                        <option value="reta">Reta (Nivelada com as laterais)</option>
-                        <option value="chapeu">Chapéu (Com Saia/Bordas)</option>
-                    </select>
+            <div class="option-box">
+                <label class="toggle-row">
+                    <span><strong>Módulo de lixeira</strong><small>Mesmas peças, com altura própria</small></span>
+                    <input type="checkbox" class="switch" id="temLixeira">
+                </label>
+                <div class="field" id="grupoLixeira" hidden>
+                    <label for="alturaLixeira">Altura do módulo lixeira</label>
+                    <div class="input-wrap"><input type="text" inputmode="decimal" id="alturaLixeira" placeholder="Ex: 5" autocomplete="off"><span class="unit">cm</span></div>
                 </div>
             </div>
-            
-            <div class="form-group" id="grupoChapeu" style="display:none; background: #faf8f5; padding: 15px; border: 1px solid var(--border); border-radius: 6px;">
-                <div class="grid-3">
-                    <div class="form-group" style="margin-bottom:0;">
-                        <label>Aba Externa (cm)</label>
-                        <input type="number" id="tamanhoAba" step="0.1" value="2" placeholder="Ex: 2">
+        </section>
+
+        <!-- 4. Tampa -->
+        <section class="card no-print">
+            <div class="card-head">
+                <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M2 8h20v3H2z"/><path d="M4 11v3M20 11v3M6 11v9h12v-9"/></svg></span>
+                <h2>Tampa</h2>
+            </div>
+            <div class="opt-grid">
+                <label class="opt">
+                    <input type="radio" name="modeloTampa" value="reta" checked>
+                    <span class="opt-body">
+                        <svg viewBox="0 0 40 40" aria-hidden="true"><rect x="8" y="16" width="24" height="18" class="f-wood s-piece"/><rect x="8" y="11" width="24" height="5" class="f-wood2 s-piece"/></svg>
+                        <span><span class="opt-title">Reta</span><span class="opt-sub">Nivelada c/ as laterais</span></span>
+                    </span>
+                </label>
+                <label class="opt">
+                    <input type="radio" name="modeloTampa" value="chapeu">
+                    <span class="opt-body">
+                        <svg viewBox="0 0 40 40" aria-hidden="true"><rect x="10" y="17" width="20" height="17" class="f-wood s-piece"/><rect x="3" y="9" width="34" height="4" class="f-wood2 s-piece"/><rect x="6" y="13" width="3" height="9" class="f-wood2 s-piece"/><rect x="31" y="13" width="3" height="9" class="f-wood2 s-piece"/></svg>
+                        <span><span class="opt-title">Chapéu</span><span class="opt-sub">Com saia e abas</span></span>
+                    </span>
+                </label>
+            </div>
+
+            <div id="grupoChapeu" class="option-box" style="margin-top: 12px;" hidden>
+                <div class="grid-3" style="margin-top: 0;">
+                    <div class="field" style="margin-top: 0;">
+                        <label for="tamanhoAba">Aba externa</label>
+                        <div class="input-wrap"><input type="text" inputmode="decimal" id="tamanhoAba" value="2" autocomplete="off"><span class="unit">cm</span></div>
                     </div>
-                    <div class="form-group" style="margin-bottom:0;">
-                        <label>Altura da Saia (cm)</label>
-                        <input type="number" id="alturaSaia" step="0.1" value="4" placeholder="Ex: 4">
+                    <div class="field" style="margin-top: 0;">
+                        <label for="alturaSaia">Altura da saia</label>
+                        <div class="input-wrap"><input type="text" inputmode="decimal" id="alturaSaia" value="4" autocomplete="off"><span class="unit">cm</span></div>
                     </div>
-                    <div class="form-group" style="margin-bottom:0;">
-                        <label>Folga da Saia (cm)</label>
-                        <input type="number" id="folgaSaia" step="0.1" value="0.5" placeholder="Ex: 0.5">
+                    <div class="field" style="margin-top: 0;">
+                        <label for="folgaSaia">Folga total</label>
+                        <div class="input-wrap"><input type="text" inputmode="decimal" id="folgaSaia" value="0,5" autocomplete="off"><span class="unit">cm</span></div>
                     </div>
                 </div>
-                <p style="font-size: 12px; color: #666; margin-top: 10px; margin-bottom: 0;">*A folga garante que o chapéu entre fácil no módulo sem ficar agarrando na madeira.</p>
+                <p class="hint">A folga é somada à medida externa (metade de cada lado) para o chapéu entrar fácil sem agarrar na madeira.</p>
             </div>
+        </section>
 
-            <button type="button" onclick="calcular()" style="margin-top: 10px;">Calcular Cortes e Salvar</button>
-            <div id="status" class="status-msg"></div>
-        </form>
-    </div>
+        <div class="no-print" style="margin-bottom: 14px;">
+            <button type="submit" class="btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12"/></svg>
+                Calcular cortes
+            </button>
+        </div>
+    </form>
 
-    <div class="card" id="resultado">
-        <h2>Lista de Cortes</h2>
-        
-        <div class="result-box">
-            <strong>1. Estrutura do Módulo</strong>
-            <div class="result-item">
-                <span id="labelInterna">Camada 1 (Madeira Interna)</span>
-                <strong class="result-value" id="resInterna"></strong>
-            </div>
-            <div class="result-item" id="itemIsopor" style="display:none;">
-                <span>Camada 2 (Recheio Isopor)</span>
-                <strong class="result-value" id="resIsopor"></strong>
-            </div>
-            <div class="result-item" id="itemExterna" style="display:none;">
-                <span>Camada 3 (Madeira Externa)</span>
-                <strong class="result-value" id="resExterna"></strong>
-            </div>
-            <div class="result-item" id="itemExtra" style="display:none; background-color: #fff3cd; padding: 5px;">
-                <span>Camada Extra (Revestimento)</span>
-                <strong class="result-value" id="resExtra"></strong>
-            </div>
+    <!-- Resultado -->
+    <section class="card placeholder no-print" id="placeholder">
+        <svg viewBox="-14 -14 28 24" aria-hidden="true">
+            <ellipse cx="-2" cy="-7" rx="4.5" ry="7" style="fill: var(--eps); stroke: var(--border);" transform="rotate(-20 -2 -7)"/>
+            <ellipse cx="3" cy="-7" rx="4" ry="6.5" style="fill: var(--eps); stroke: var(--border);" transform="rotate(20 3 -7)"/>
+            <ellipse cx="0" cy="0" rx="8" ry="5.5" fill="#f2b632"/>
+            <path d="M-2 -5.1v10.2M2.5 -4.8v9.6" stroke="#3a2a12" stroke-width="2"/>
+            <circle cx="9" cy="0" r="3.6" fill="#3a2a12"/>
+        </svg>
+        <p>Preencha as medidas e toque em <strong>Calcular cortes</strong>.</p>
+    </section>
+
+    <section class="card" id="resultado" hidden>
+        <div class="card-head">
+            <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4.5" cy="6" r="1.2"/><circle cx="4.5" cy="12" r="1.2"/><circle cx="4.5" cy="18" r="1.2"/></svg></span>
+            <h2>Lista de cortes</h2>
         </div>
 
-        <div class="result-box lixeira-box" id="boxLixeira" style="display:none;">
-            <strong>2. Módulo de Lixeira</strong>
-            <p style="font-size: 13px; margin: 5px 0 10px 0;">Cortar na altura exata de <strong id="txtAlturaLixeira"></strong> cm.</p>
-            <div class="result-item">
-                <span id="labelLixInterna">Camada 1</span>
-                <strong class="result-value" id="resLixInterna"></strong>
-            </div>
-            <div class="result-item" id="itemLixIsopor" style="display:none;">
-                <span>Camada 2 (Isopor)</span>
-                <strong class="result-value" id="resLixIsopor"></strong>
-            </div>
-            <div class="result-item" id="itemLixExterna" style="display:none;">
-                <span>Camada 3 (Externa)</span>
-                <strong class="result-value" id="resLixExterna"></strong>
-            </div>
-            <div class="result-item" id="itemLixExtra" style="display:none;">
-                <span>Camada Extra</span>
-                <strong class="result-value" id="resLixExtra"></strong>
-            </div>
+        <div class="tags" id="resTags"></div>
+
+        <div class="stats">
+            <div class="stat"><span>Interno livre</span><strong id="resInterno"></strong></div>
+            <div class="stat destaque"><span>Medida externa final</span><strong id="resExterno"></strong></div>
         </div>
 
-        <div class="result-box">
-            <strong id="titleFechamentos">3. Fechamentos</strong>
-            <div class="result-item">
-                <span>Fundo (Nivelado c/ a Base)</span>
-                <strong class="result-value" id="resFundo"></strong>
+        <figure class="diagram">
+            <svg id="diagrama" role="img" aria-label="Vista de cima das paredes do módulo"></svg>
+            <div class="legend" id="legenda"></div>
+            <figcaption>Vista de cima do módulo</figcaption>
+        </figure>
+
+        <div class="group">
+            <div class="group-title">
+                <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M8 8h8v8H8z"/></svg></span>
+                Paredes do módulo
             </div>
-            <div class="result-item" style="display: block;">
-                <span style="display: block; margin-bottom: 8px;">Tampa</span>
-                <div class="result-value" id="resTampa" style="text-align: left; padding-left: 15px; border-left: 3px solid var(--secondary);"></div>
-            </div>
+            <div id="listaParedes"></div>
         </div>
-        
-        <button type="button" onclick="window.print()" style="margin-top: 15px; background-color: var(--secondary);">Imprimir / Salvar PDF</button>
-    </div>
+
+        <div class="group" id="grupoResLixeira" hidden>
+            <div class="group-title">
+                <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></span>
+                Módulo de lixeira
+            </div>
+            <p class="group-note">Mesmas peças, cortadas com <strong id="txtAlturaLixeira"></strong> cm de altura.</p>
+            <div id="listaLixeira"></div>
+        </div>
+
+        <div class="group">
+            <div class="group-title">
+                <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M2 8h20v3H2z"/><path d="M6 11v9h12v-9"/></svg></span>
+                Fundo e tampa
+            </div>
+            <div id="listaFechamentos"></div>
+        </div>
+
+        <div class="actions no-print">
+            <button type="button" class="btn btn-secondary" id="btnCompartilhar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>
+                Compartilhar
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="window.print()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 9V3h12v6M6 18H4v-7h16v7h-2M7 14h10v7H7z"/></svg>
+                Imprimir / PDF
+            </button>
+        </div>
+    </section>
+
+    <footer>Feito para o meliponário 🐝 · os dados ficam salvos só neste aparelho</footer>
 </div>
 
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
 <script>
-    // Dinâmica da Interface
-    document.getElementById('modeloTampa').addEventListener('change', function() {
-        document.getElementById('grupoChapeu').style.display = this.value === 'chapeu' ? 'block' : 'none';
-    });
+    const $ = id => document.getElementById(id);
+    const STORAGE_KEY = 'config_meliponario_v6';
+    const NOMES = {
+        simples: 'Caixa simples', sanduiche: 'Caixa sanduíche',
+        catavento: 'Encaixe cata-vento', topotopo: 'Encaixe topo a topo',
+        reta: 'Tampa reta', chapeu: 'Tampa chapéu'
+    };
+    let ultimo = null; // último cálculo válido { d, m }
 
-    document.getElementById('tipoCaixa').addEventListener('change', function() {
-        document.getElementById('grupoIsopor').style.display = this.value === 'sanduiche' ? 'block' : 'none';
-    });
+    // ---------- Utilitários ----------
+    function num(id) {
+        const n = parseFloat($(id).value.trim().replace(',', '.'));
+        return Number.isFinite(n) ? n : 0;
+    }
+    const radio = name => document.querySelector(`input[name="${name}"]:checked`).value;
+    function setRadio(name, value) {
+        const el = document.querySelector(`input[name="${name}"][value="${value}"]`);
+        if (el) el.checked = true;
+    }
+    // Arredonda para evitar coisas como 15.700000000000001
+    const arred = n => Math.round(n * 100) / 100;
+    const fmt = n => arred(n).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+    const dim = (w, l) => `${fmt(w)} × ${fmt(l)} cm`;
 
-    document.getElementById('temCamadaExtra').addEventListener('change', function() {
-        document.getElementById('grupoExtra').style.display = this.checked ? 'block' : 'none';
-    });
+    let toastTimer;
+    function aviso(msg) {
+        const t = $('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+    }
 
-    document.getElementById('temLixeira').addEventListener('change', function() {
-        document.getElementById('grupoLixeira').style.display = this.checked ? 'block' : 'none';
-    });
+    // ---------- Leitura e validação ----------
+    function lerEntradas() {
+        return {
+            tipo: radio('tipoCaixa'),
+            encaixe: radio('tipoEncaixe'),
+            internaW: num('larguraInterna'),
+            internaL: num('comprimentoInterno'),
+            mad: num('espessuraMadeira'),
+            isopor: num('espessuraIsopor'),
+            temExtra: $('temCamadaExtra').checked,
+            madExtra: num('espessuraExtra'),
+            temLixeira: $('temLixeira').checked,
+            altLixeira: num('alturaLixeira'),
+            modelo: radio('modeloTampa'),
+            aba: num('tamanhoAba'),
+            altSaia: num('alturaSaia'),
+            folgaSaia: num('folgaSaia')
+        };
+    }
 
-    // Função auxiliar para calcular os cortes baseados no encaixe
+    function validar(d) {
+        const erros = [];
+        if (d.internaW <= 0) erros.push('larguraInterna');
+        if (d.internaL <= 0) erros.push('comprimentoInterno');
+        if (d.mad <= 0) erros.push('espessuraMadeira');
+        if (d.tipo === 'sanduiche' && d.isopor <= 0) erros.push('espessuraIsopor');
+        if (d.temExtra && d.madExtra <= 0) erros.push('espessuraExtra');
+        if (d.temLixeira && d.altLixeira <= 0) erros.push('alturaLixeira');
+        if (d.modelo === 'chapeu' && d.altSaia <= 0) erros.push('alturaSaia');
+        return erros;
+    }
+
+    function atualizarVisibilidade() {
+        $('grupoIsopor').hidden = radio('tipoCaixa') !== 'sanduiche';
+        $('grupoExtra').hidden = !$('temCamadaExtra').checked;
+        $('grupoLixeira').hidden = !$('temLixeira').checked;
+        $('grupoChapeu').hidden = radio('modeloTampa') !== 'chapeu';
+    }
+
+    // ---------- Cálculo ----------
+    // Comprimento das peças de uma camada, a partir da medida interna dessa camada
     function getLayerCuts(w, l, thickness, encaixe) {
         if (encaixe === 'catavento') {
             return { cW: w + thickness, cL: l + thickness };
-        } else {
-            // Topo a Topo: A peça menor (ou igual) fica por dentro (sem receber espessura)
-            // A peça maior abraça a menor, recebendo a espessura dupla.
-            if (w < l) {
-                return { cW: w, cL: l + (thickness * 2) };
-            } else {
-                return { cW: w + (thickness * 2), cL: l };
-            }
         }
+        // Topo a Topo: a peça menor (ou igual) fica por dentro;
+        // a maior abraça a menor, recebendo a espessura dupla.
+        if (w < l) return { cW: w, cL: l + thickness * 2 };
+        return { cW: w + thickness * 2, cL: l };
     }
 
-    // Formatação de saída (se os pedaços forem iguais, une em '4 peças')
-    function formataPecas(cW, cL) {
-        if(cW === cL) return `4 peças de ${cW} cm`;
-        return `2 peças de ${cW} cm<br>2 peças de ${cL} cm`;
+    // Se os pedaços forem iguais, une em "4 peças"
+    function pecas(cW, cL) {
+        cW = arred(cW); cL = arred(cL);
+        return cW === cL ? [{ qtd: 4, med: cW }] : [{ qtd: 2, med: cW }, { qtd: 2, med: cL }];
     }
 
-    function calcular() {
-        const tipo = document.getElementById('tipoCaixa').value;
-        const encaixe = document.getElementById('tipoEncaixe').value;
-        const internaW = parseFloat(document.getElementById('larguraInterna').value);
-        const internaL = parseFloat(document.getElementById('comprimentoInterno').value);
-        const mad = parseFloat(document.getElementById('espessuraMadeira').value);
-        
-        const isopor = parseFloat(document.getElementById('espessuraIsopor').value) || 0;
-        const temExtra = document.getElementById('temCamadaExtra').checked;
-        const madExtra = parseFloat(document.getElementById('espessuraExtra').value) || 0;
-        
-        const temLixeira = document.getElementById('temLixeira').checked;
-        const altLixeira = parseFloat(document.getElementById('alturaLixeira').value) || 0;
+    function calcularModelo(d) {
+        let w = d.internaW, l = d.internaL;
+        const camadas = [];
+        const addCamada = (nome, cls, t) => {
+            const c = getLayerCuts(w, l, t, d.encaixe);
+            camadas.push({ nome, cls, t, w, l, pecas: pecas(c.cW, c.cL) });
+            w += t * 2;
+            l += t * 2;
+        };
 
-        const modelo = document.getElementById('modeloTampa').value;
-        const aba = parseFloat(document.getElementById('tamanhoAba').value) || 0;
-        const altSaia = parseFloat(document.getElementById('alturaSaia').value) || 0;
-        const folgaSaia = parseFloat(document.getElementById('folgaSaia').value) || 0;
-
-        if(!internaW || !internaL || !mad) return alert("Preencha as medidas internas e a espessura da madeira!");
-
-        // Variáveis de controle de crescimento externo (Largura e Comprimento)
-        let extW = internaW;
-        let extL = internaL;
-
-        // Camada 1: Madeira Principal
-        let cortes1 = getLayerCuts(extW, extL, mad, encaixe);
-        extW += mad * 2;
-        extL += mad * 2;
-        
-        document.getElementById('labelInterna').innerText = tipo === 'simples' ? "Madeira (Parede Principal)" : "Camada 1 (Madeira Interna)";
-        document.getElementById('resInterna').innerHTML = formataPecas(cortes1.cW, cortes1.cL);
-        if(temLixeira) {
-            document.getElementById('txtAlturaLixeira').innerText = altLixeira;
-            document.getElementById('labelLixInterna').innerText = tipo === 'simples' ? "Madeira (Parede Principal)" : "Camada 1 (Madeira Interna)";
-            document.getElementById('resLixInterna').innerHTML = formataPecas(cortes1.cW, cortes1.cL);
-        }
-
-        // Camada 2 e 3: Isopor e Fechamento
-        if(tipo === 'sanduiche') {
-            let cortes2 = getLayerCuts(extW, extL, isopor, encaixe);
-            extW += isopor * 2;
-            extL += isopor * 2;
-            document.getElementById('resIsopor').innerHTML = formataPecas(cortes2.cW, cortes2.cL);
-            document.getElementById('itemIsopor').style.display = 'flex';
-            
-            let cortes3 = getLayerCuts(extW, extL, mad, encaixe);
-            extW += mad * 2;
-            extL += mad * 2;
-            document.getElementById('resExterna').innerHTML = formataPecas(cortes3.cW, cortes3.cL);
-            document.getElementById('itemExterna').style.display = 'flex';
-
-            if(temLixeira) {
-                document.getElementById('resLixIsopor').innerHTML = formataPecas(cortes2.cW, cortes2.cL);
-                document.getElementById('itemLixIsopor').style.display = 'flex';
-                document.getElementById('resLixExterna').innerHTML = formataPecas(cortes3.cW, cortes3.cL);
-                document.getElementById('itemLixExterna').style.display = 'flex';
-            }
+        if (d.tipo === 'sanduiche') {
+            addCamada('Camada 1 · Madeira interna', 'wood', d.mad);
+            addCamada('Camada 2 · Isopor', 'eps', d.isopor);
+            addCamada('Camada 3 · Madeira externa', 'wood', d.mad);
         } else {
-            document.getElementById('itemIsopor').style.display = 'none';
-            document.getElementById('itemExterna').style.display = 'none';
-            document.getElementById('itemLixIsopor').style.display = 'none';
-            document.getElementById('itemLixExterna').style.display = 'none';
+            addCamada('Parede de madeira', 'wood', d.mad);
         }
+        if (d.temExtra) addCamada('Revestimento extra', 'extra', d.madExtra);
 
-        // Camada Extra
-        if(temExtra) {
-            let cortesExtra = getLayerCuts(extW, extL, madExtra, encaixe);
-            extW += madExtra * 2;
-            extL += madExtra * 2;
-            document.getElementById('resExtra').innerHTML = formataPecas(cortesExtra.cW, cortesExtra.cL);
-            document.getElementById('itemExtra').style.display = 'flex';
-            if(temLixeira) {
-                document.getElementById('resLixExtra').innerHTML = formataPecas(cortesExtra.cW, cortesExtra.cL);
-                document.getElementById('itemLixExtra').style.display = 'flex';
-            }
+        const tampa = {};
+        if (d.modelo === 'chapeu') {
+            const inW = w + d.folgaSaia, inL = l + d.folgaSaia;
+            const c = getLayerCuts(inW, inL, d.mad, d.encaixe);
+            tampa.saia = pecas(c.cW, c.cL);
+            tampa.placa = [inW + d.mad * 2 + d.aba * 2, inL + d.mad * 2 + d.aba * 2];
         } else {
-            document.getElementById('itemExtra').style.display = 'none';
-            document.getElementById('itemLixExtra').style.display = 'none';
+            tampa.placa = [w, l];
         }
 
-        // Lixeira visual
-        document.getElementById('boxLixeira').style.display = temLixeira ? 'block' : 'none';
-        document.getElementById('titleFechamentos').innerText = temLixeira ? '3. Fechamentos' : '2. Fechamentos';
+        return { camadas, ext: { w, l }, tampa };
+    }
 
-        // Fechamentos (Fundo nivelado)
-        document.getElementById('resFundo').innerText = `1 placa de ${extW} x ${extL} cm`;
+    // ---------- Renderização ----------
+    const chips = lista => lista.map(p => `<span class="chip"><b>${p.qtd}×</b> ${fmt(p.med)} cm</span>`).join('');
+    const linha = (nome, conteudo, cls) =>
+        `<div class="row"><div class="row-name">${cls ? `<i class="sw sw-${cls}"></i>` : ''}${nome}</div><div class="chips">${conteudo}</div></div>`;
 
-        // Lógica da Tampa Chapéu
-        let htmlTampa = '';
-        if (modelo === 'chapeu') {
-            const inSaiaW = extW + folgaSaia;
-            const inSaiaL = extL + folgaSaia;
-            
-            // Cortes para formar a saia do chapéu (usa a madeira base)
-            const cortesSaia = getLayerCuts(inSaiaW, inSaiaL, mad, encaixe);
-            
-            // Medida final externa da saia
-            const outSaiaW = inSaiaW + (mad * 2);
-            const outSaiaL = inSaiaL + (mad * 2);
+    function renderizar(d, m) {
+        const tags = [NOMES[d.tipo], NOMES[d.encaixe], `Madeira ${fmt(d.mad)} cm`];
+        if (d.tipo === 'sanduiche') tags.push(`Isopor ${fmt(d.isopor)} cm`);
+        if (d.temExtra) tags.push(`Extra ${fmt(d.madExtra)} cm`);
+        tags.push(NOMES[d.modelo]);
+        $('resTags').innerHTML = tags.map(t => `<span class="tag">${t}</span>`).join('');
 
-            // Prancha com aba fica por cima de tudo
-            const placaTopW = outSaiaW + (aba * 2);
-            const placaTopL = outSaiaL + (aba * 2);
+        $('resInterno').textContent = dim(d.internaW, d.internaL);
+        $('resExterno').textContent = dim(m.ext.w, m.ext.l);
 
-            htmlTampa = `
-                <div style="margin-bottom: 8px;"><strong>Prancha Superior:</strong> 1 placa de ${placaTopW} x ${placaTopL} cm</div>
-                <div><strong>Moldura/Saia (${altSaia}cm altura):</strong><br> ${formataPecas(cortesSaia.cW, cortesSaia.cL)}</div>
-            `;
+        const paredes = m.camadas.map(c => linha(c.nome, chips(c.pecas), c.cls)).join('');
+        $('listaParedes').innerHTML = paredes;
+
+        $('grupoResLixeira').hidden = !d.temLixeira;
+        if (d.temLixeira) {
+            $('txtAlturaLixeira').textContent = fmt(d.altLixeira);
+            $('listaLixeira').innerHTML = paredes;
+        }
+
+        let fech = linha('Fundo (nivelado c/ a base)', `<span class="chip"><b>1×</b> ${dim(m.ext.w, m.ext.l)}</span>`);
+        if (d.modelo === 'chapeu') {
+            fech += linha('Tampa · prancha superior', `<span class="chip"><b>1×</b> ${dim(...m.tampa.placa)}</span>`);
+            fech += linha(`Tampa · saia (${fmt(d.altSaia)} cm de altura)`, chips(m.tampa.saia));
         } else {
-            htmlTampa = `<strong>Prancha Plana:</strong> 1 placa de ${extW} x ${extL} cm`;
+            fech += linha('Tampa · prancha plana', `<span class="chip"><b>1×</b> ${dim(...m.tampa.placa)}</span>`);
         }
-        document.getElementById('resTampa').innerHTML = htmlTampa;
-        document.getElementById('resultado').style.display = 'block';
+        $('listaFechamentos').innerHTML = fech;
 
-        // Salvar
-        salvarDados({ 
-            tipo, encaixe, internaW, internaL, mad, isopor, 
-            temExtra, madExtra, temLixeira, altLixeira, 
-            modelo, aba, altSaia, folgaSaia
+        desenharDiagrama(d, m);
+
+        $('placeholder').hidden = true;
+        $('resultado').hidden = false;
+    }
+
+    // Retângulos [x, y, largura, altura] das 4 peças de uma camada (vista de cima)
+    function retangulosCamada(x0, y0, w, l, t, encaixe) {
+        if (encaixe === 'catavento') {
+            return [[x0, y0 - t, w + t, t], [x0 + w, y0, t, l + t], [x0 - t, y0 + l, w + t, t], [x0 - t, y0 - t, t, l + t]];
+        }
+        if (w < l) {
+            return [[x0 - t, y0 - t, t, l + 2 * t], [x0 + w, y0 - t, t, l + 2 * t], [x0, y0 - t, w, t], [x0, y0 + l, w, t]];
+        }
+        return [[x0 - t, y0 - t, w + 2 * t, t], [x0 - t, y0 + l, w + 2 * t, t], [x0 - t, y0, t, l], [x0 + w, y0, t, l]];
+    }
+
+    function desenharDiagrama(d, m) {
+        const W = d.internaW, L = d.internaL;
+        const T = (m.ext.w - W) / 2;          // espessura total da parede
+        const M = Math.max(m.ext.w, m.ext.l);
+        const fs = M * 0.06;                   // tamanho da fonte
+        const mDim = M * 0.18;                 // margem para as cotas (topo e direita)
+        const mPeq = M * 0.04;
+        const fill = { wood: 'f-wood', eps: 'f-eps', extra: 'f-wood2' };
+
+        let s = `<rect x="0" y="0" width="${W}" height="${L}" class="dg-inner"/>`;
+        m.camadas.forEach(c => {
+            const o = (c.w - W) / 2;
+            retangulosCamada(-o, -o, c.w, c.l, c.t, d.encaixe).forEach(([x, y, w, h]) => {
+                s += `<rect x="${x}" y="${y}" width="${w}" height="${h}" class="${fill[c.cls]} s-piece" vector-effect="non-scaling-stroke"/>`;
+            });
         });
+
+        // Comprimento de cada peça escrito dentro dela (só se a camada for grossa o bastante para caber o texto)
+        m.camadas.forEach(c => {
+            const o = (c.w - W) / 2;
+            const fp = Math.min(fs, c.t * 0.6);
+            if (fp < fs * 0.6) return;
+            retangulosCamada(-o, -o, c.w, c.l, c.t, d.encaixe).forEach(([x, y, w, h]) => {
+                const cx = x + w / 2, cy = y + h / 2;
+                const vertical = h > w;
+                const rot = vertical ? ` rotate(-90)` : '';
+                s += `<text transform="translate(${cx} ${cy})${rot}" font-size="${fp}" text-anchor="middle" dominant-baseline="central" class="dg-piece dg-piece-${c.cls}">${fmt(Math.max(w, h))} cm</text>`;
+            });
+        });
+
+        // Medida interna no centro
+        s += `<text x="${W / 2}" y="${L / 2}" font-size="${fs * 0.8}" text-anchor="middle" class="dg-text">interno</text>`;
+        s += `<text x="${W / 2}" y="${L / 2 + fs * 1.1}" font-size="${fs}" text-anchor="middle" class="dg-text dg-strong">${fmt(W)} × ${fmt(L)}</text>`;
+
+        // Cota superior (largura externa)
+        const yC = -T - mDim * 0.4, tk = fs * 0.3;
+        s += `<path d="M${-T} ${yC}H${W + T}M${-T} ${yC - tk}v${tk * 2}M${W + T} ${yC - tk}v${tk * 2}" class="dg-line" vector-effect="non-scaling-stroke"/>`;
+        s += `<text x="${W / 2}" y="${yC - fs * 0.45}" font-size="${fs}" text-anchor="middle" class="dg-text dg-strong">${fmt(m.ext.w)} cm</text>`;
+
+        // Cota direita (comprimento externo)
+        const xC = W + T + mDim * 0.4;
+        s += `<path d="M${xC} ${-T}V${L + T}M${xC - tk} ${-T}h${tk * 2}M${xC - tk} ${L + T}h${tk * 2}" class="dg-line" vector-effect="non-scaling-stroke"/>`;
+        s += `<text transform="translate(${xC + fs * 0.45} ${L / 2}) rotate(90)" font-size="${fs}" text-anchor="middle" class="dg-text dg-strong">${fmt(m.ext.l)} cm</text>`;
+
+        const svg = $('diagrama');
+        svg.setAttribute('viewBox', `${-T - mPeq} ${-T - mDim} ${m.ext.w + mPeq + mDim} ${m.ext.l + mDim + mPeq}`);
+        svg.innerHTML = s;
+
+        // Legenda (sem repetir a madeira do sanduíche)
+        const vistos = new Set();
+        $('legenda').innerHTML = m.camadas.filter(c => !vistos.has(c.cls) && vistos.add(c.cls)).map(c => {
+            const nome = { wood: 'Madeira', eps: 'Isopor', extra: 'Revestimento' }[c.cls];
+            return `<span><i class="sw sw-${c.cls}"></i>${nome} ${fmt(c.t)} cm</span>`;
+        }).join('');
     }
 
-    function salvarDados(dados) {
-        localStorage.setItem('config_meliponario_v6', JSON.stringify(dados));
-        const status = document.getElementById('status');
-        status.innerText = "Parâmetros salvos no navegador!";
-        setTimeout(() => status.innerText = "", 3000);
-    }
-
-    window.onload = function() {
-        const saved = localStorage.getItem('config_meliponario_v6');
-        if(saved) {
-            const dados = JSON.parse(saved);
-            
-            document.getElementById('tipoCaixa').value = dados.tipo || 'simples';
-            document.getElementById('tipoEncaixe').value = dados.encaixe || 'catavento';
-            document.getElementById('larguraInterna').value = dados.internaW;
-            document.getElementById('comprimentoInterno').value = dados.internaL;
-            document.getElementById('espessuraMadeira').value = dados.mad;
-            document.getElementById('espessuraIsopor').value = dados.isopor;
-            
-            document.getElementById('temCamadaExtra').checked = dados.temExtra || false;
-            document.getElementById('espessuraExtra').value = dados.madExtra;
-            document.getElementById('temLixeira').checked = dados.temLixeira || false;
-            document.getElementById('alturaLixeira').value = dados.altLixeira;
-            
-            document.getElementById('modeloTampa').value = dados.modelo || 'reta';
-            document.getElementById('tamanhoAba').value = dados.aba;
-            document.getElementById('alturaSaia').value = dados.altSaia;
-            document.getElementById('folgaSaia').value = dados.folgaSaia || 0.5;
-            
-            document.getElementById('tipoCaixa').dispatchEvent(new Event('change'));
-            document.getElementById('temCamadaExtra').dispatchEvent(new Event('change'));
-            document.getElementById('temLixeira').dispatchEvent(new Event('change'));
-            document.getElementById('modeloTampa').dispatchEvent(new Event('change'));
+    // ---------- Texto para compartilhar (WhatsApp etc.) ----------
+    function textoLista(d, m) {
+        const p = lista => lista.map(x => `${x.qtd}× ${fmt(x.med)} cm`).join(' + ');
+        const paredes = m.camadas.map(c => `• ${c.nome}: ${p(c.pecas)}`);
+        const t = [
+            '🐝 LISTA DE CORTES',
+            `${NOMES[d.tipo]} · ${NOMES[d.encaixe]} · ${NOMES[d.modelo]}`,
+            `Interno: ${dim(d.internaW, d.internaL)} | Externo: ${dim(m.ext.w, m.ext.l)}`,
+            '',
+            'PAREDES DO MÓDULO',
+            ...paredes
+        ];
+        if (d.temLixeira) t.push('', `MÓDULO LIXEIRA (altura ${fmt(d.altLixeira)} cm)`, ...paredes);
+        t.push('', 'FUNDO E TAMPA', `• Fundo: 1× ${dim(m.ext.w, m.ext.l)}`);
+        if (d.modelo === 'chapeu') {
+            t.push(`• Tampa (prancha superior): 1× ${dim(...m.tampa.placa)}`);
+            t.push(`• Tampa (saia, ${fmt(d.altSaia)} cm de altura): ${p(m.tampa.saia)}`);
+        } else {
+            t.push(`• Tampa (prancha plana): 1× ${dim(...m.tampa.placa)}`);
         }
-    };
+        return t.join('\n');
+    }
+
+    async function compartilhar() {
+        if (!ultimo) return;
+        const texto = textoLista(ultimo.d, ultimo.m);
+        if (navigator.share) {
+            try { await navigator.share({ title: 'Lista de cortes', text: texto }); return; }
+            catch (e) { if (e.name === 'AbortError') return; }
+        }
+        try {
+            await navigator.clipboard.writeText(texto);
+        } catch {
+            const ta = document.createElement('textarea');
+            ta.value = texto;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            ta.remove();
+        }
+        aviso('Lista copiada!');
+    }
+
+    // ---------- Persistência ----------
+    function salvarDados(dados) {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(dados)); } catch { /* armazenamento indisponível */ }
+    }
+
+    function carregarDados() {
+        let dados;
+        try { dados = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { return; }
+        if (!dados) return;
+
+        const setVal = (id, v) => { $(id).value = v || v === 0 ? String(v).replace('.', ',') : ''; };
+        setRadio('tipoCaixa', dados.tipo || 'simples');
+        setRadio('tipoEncaixe', dados.encaixe || 'catavento');
+        setRadio('modeloTampa', dados.modelo || 'reta');
+        setVal('larguraInterna', dados.internaW);
+        setVal('comprimentoInterno', dados.internaL);
+        setVal('espessuraMadeira', dados.mad);
+        setVal('espessuraIsopor', dados.isopor || '');
+        $('temCamadaExtra').checked = !!dados.temExtra;
+        setVal('espessuraExtra', dados.madExtra || '');
+        $('temLixeira').checked = !!dados.temLixeira;
+        setVal('alturaLixeira', dados.altLixeira || '');
+        setVal('tamanhoAba', dados.aba ?? 2);
+        setVal('alturaSaia', dados.altSaia ?? 4);
+        setVal('folgaSaia', dados.folgaSaia ?? 0.5);
+    }
+
+    // ---------- Fluxo ----------
+    function calcular({ silencioso = false } = {}) {
+        const d = lerEntradas();
+        const erros = validar(d);
+
+        document.querySelectorAll('.field.invalid').forEach(f => f.classList.remove('invalid'));
+        if (erros.length) {
+            if (!silencioso) {
+                erros.forEach(id => $(id).closest('.field').classList.add('invalid'));
+                $(erros[0]).focus();
+                aviso('Confira os campos destacados');
+            }
+            return false;
+        }
+
+        const m = calcularModelo(d);
+        ultimo = { d, m };
+        renderizar(d, m);
+        salvarDados(d);
+        return true;
+    }
+
+    $('calcForm').addEventListener('submit', e => {
+        e.preventDefault();
+        if (calcular()) {
+            $('resultado').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    });
+
+    // Recalcula ao vivo depois que já existe um resultado na tela
+    ['input', 'change'].forEach(ev => $('calcForm').addEventListener(ev, e => {
+        atualizarVisibilidade();
+        const campo = e.target.closest('.field');
+        if (campo) campo.classList.remove('invalid');
+        if (!$('resultado').hidden) calcular({ silencioso: true });
+    }));
+
+    $('btnCompartilhar').addEventListener('click', compartilhar);
+
+    carregarDados();
+    atualizarVisibilidade();
+    calcular({ silencioso: true });
 </script>
 </body>
 </html>
